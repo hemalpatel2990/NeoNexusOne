@@ -48,6 +48,8 @@ def generate_all(config: EchoConfig | None = None):
         ("Blueprints",            lambda: generate_blueprints(config)),
         ("Level",                 lambda: generate_level(config)),
         ("Engine Config",         lambda: generate_engine_config(config)),
+        ("Material Graph",        lambda: generate_material_graph(config)),
+        ("Level Polish",          lambda: generate_level_polish(config)),
     ]
 
     success = 0
@@ -837,3 +839,39 @@ def generate_engine_config(config: EchoConfig):
         log_created("DefaultEngine.ini updates", config_path)
     else:
         unreal.log("[EchoGenerator] DefaultEngine.ini already up to date")
+
+
+# ======================================================================
+# 11 — Material Graph
+# ======================================================================
+
+def generate_material_graph(config: EchoConfig):
+    """Build the M_EchoMaster SphereMask ring shader node graph."""
+    import importlib
+    import sys
+
+    script_dir = os.path.join(unreal.Paths.project_dir(), "Scripts", "EditorUtility").replace("\\", "/")
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
+
+    mod = importlib.import_module("11_build_material_graph")
+    importlib.reload(mod)
+    mod.run()
+
+
+# ======================================================================
+# 12 — Level Polish
+# ======================================================================
+
+def generate_level_polish(config: EchoConfig):
+    """Add SkyLight, fog, PostProcessVolume, NavMesh to L_EchoPrototype."""
+    import importlib
+    import sys
+
+    script_dir = os.path.join(unreal.Paths.project_dir(), "Scripts", "EditorUtility").replace("\\", "/")
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
+
+    mod = importlib.import_module("12_polish_level")
+    importlib.reload(mod)
+    mod.run()

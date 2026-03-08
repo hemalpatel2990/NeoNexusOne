@@ -40,7 +40,9 @@ SCRIPTS = [
     "07_create_blueprints",          # depends on all prior
     "08_create_level",               # depends on 06, 07
     "09_update_config",              # depends on 07, 08
-    "10_create_tool_widget",         # Tools menu + EUW (runs last)
+    "10_create_tool_widget",         # Tools menu + EUW
+    "11_build_material_graph",       # depends on 01, 06 (wires M_EchoMaster node graph)
+    "12_polish_level",               # depends on 08 (SkyLight, fog, PPV, nav mesh)
 ]
 
 

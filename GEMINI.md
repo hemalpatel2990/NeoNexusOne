@@ -13,6 +13,28 @@ The core concept is "Sound-Vision": the player is in total darkness and must cre
 
 ---
 
+## Superpowers: Skills & Commands
+
+This project leverages the **Gemini Superpowers** extension to enhance reasoning, planning, and execution. Skills are battle-tested approaches that prevent common mistakes.
+
+### Core Mandates
+1. **Mandatory Activation:** If a skill might apply (even 1% chance), you MUST activate it using `activate_skill`.
+2. **Prioritize Process:** Process skills (`brainstorming`, `systematic-debugging`) MUST be used before implementation skills.
+3. **Verification First:** Use `verification-before-completion` before any success claims or commit requests.
+
+### Primary Skills
+*   **`brainstorming`**: Use before ANY creative work (features, components, behavior modification).
+*   **`writing-plans` / `executing-plans`**: Use for all multi-step implementations.
+*   **`test-driven-development`**: Use for all code changes.
+*   **`systematic-debugging`**: Use for all bugs, test failures, or unexpected behaviors.
+*   **`verification-before-completion`**: Use before claiming a task is complete.
+
+### Available Commands
+*   `/code-review`: Triggers a comprehensive review (see Tool Specific Workflows).
+*   `/icon`, `/pattern`, `/diagram`, `/story`: **Nano Banana** image generation tools for assets and diagrams.
+
+---
+
 ## Project Structure
 *   `NeoNexusOne.uproject`: The Unreal Engine 5 project descriptor file.
 *   `Source/`: Contains the C++ source code for the game, including the `NeoNexusOne` module.
@@ -51,3 +73,14 @@ All interactive objects should adhere to the "Echo" Shader logic:
 ### 4. Aesthetic Standards
 *   Maintain a minimalist "Greybox" aesthetic initially.
 *   Focus on "The Juice": Camera shakes, haptic feedback, and synced audio-visual decay.
+
+---
+
+## Tool Specific Workflows
+
+### 1. Code Review (`/code-review`)
+*   Review output MUST be written to `reviews/Code-Review.md`.
+*   Maintain `reviews/Code-Review.md` as a persistent record of the last review.
+*   Consult this file before modifying code that has been reviewed.
+*   Use `requesting-code-review` when completion or major feature steps are reached.
+*   Use `receiving-code-review` for systematic implementation of review feedback.
