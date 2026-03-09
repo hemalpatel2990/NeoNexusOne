@@ -4,6 +4,7 @@
 #include "Sound/EchoRippleManager.h"
 #include "Player/EchoPawn.h"
 #include "Core/EchoPlayerController.h"
+#include "Kismet/GameplayStatics.h"
 
 AEchoGameMode::AEchoGameMode()
 {
@@ -11,4 +12,9 @@ AEchoGameMode::AEchoGameMode()
 
 	DefaultPawnClass = AEchoPawn::StaticClass();
 	PlayerControllerClass = AEchoPlayerController::StaticClass();
+}
+
+void AEchoGameMode::TriggerGameOver()
+{
+	UGameplayStatics::OpenLevel(this, *UGameplayStatics::GetCurrentLevelName(this));
 }

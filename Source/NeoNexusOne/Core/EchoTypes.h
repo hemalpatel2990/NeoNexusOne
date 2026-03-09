@@ -19,6 +19,17 @@ enum class EEchoMovementState : uint8
 };
 
 /**
+ * AI states for Corrupted Cube enemies.
+ */
+UENUM(BlueprintType)
+enum class EEchoAIState : uint8
+{
+	Idle           UMETA(DisplayName = "Idle"),
+	Investigating  UMETA(DisplayName = "Investigating"),
+	Returning      UMETA(DisplayName = "Returning")
+};
+
+/**
  * Data payload for a ripple event triggered by an impact.
  * Passed from the player pawn to the EchoRippleManager.
  */
@@ -60,6 +71,13 @@ namespace EchoDefaults
 	// AI noise volumes
 	constexpr float DropNoiseVolume = 0.5f;
 	constexpr float SlamNoiseVolume = 1.0f;
+
+	// AI behavior
+	constexpr float AIMovementSpeed = 400.0f;
+	constexpr float AIHearingRange = 3000.0f;
+	constexpr float AIInvestigateTimeout = 5.0f;
+	constexpr float AIAcceptanceRadius = 100.0f;
+	constexpr float AIKillOverlapRadius = 60.0f;
 }
 
 /**

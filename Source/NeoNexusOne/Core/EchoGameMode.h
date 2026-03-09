@@ -19,6 +19,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Echo|Core")
 	UEchoRippleManager* GetRippleManager() const { return RippleManager; }
 
+	UFUNCTION(BlueprintCallable, Category = "Echo|Core")
+	void TriggerGameOver();
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Echo|Core")
 	TObjectPtr<UEchoRippleManager> RippleManager;

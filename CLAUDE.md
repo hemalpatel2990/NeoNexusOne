@@ -100,6 +100,12 @@ Source/NeoNexusOne/
 - Review feedback is in `reviews/Code-Review.md` — always consult before modifying reviewed files.
 - **READ-ONLY:** Do NOT write to or modify `reviews/Code-Review.md` — it is maintained by the review agent.
 
+## Milestone Plans
+
+- Design plans and feature proposals live in `docs/plans/` — **always check this directory for new or updated plans** before starting work on any milestone or feature.
+- When creating a new implementation plan, write it as a dated markdown file in `docs/plans/` (e.g., `2026-03-09-ai-threat-system.md`).
+- If a plan has changed since the last session, follow the updated plan — do not rely on stale context from previous conversations.
+
 ## Development Milestones
 
 1. **"The Greybox"** — Cube movement + basic Drop vision *(COMPLETE)*
@@ -122,14 +128,36 @@ Content/EchoLocation/
     Maps/          L_EchoPrototype
 ```
 
-**Remaining Editor steps** (run scripts 11–12 or via `00_run_all.py`):
-- `11_build_material_graph.py` — Wires the M_EchoMaster SphereMask ring shader (Distance→SmoothStep ring→emissive)
-- `12_polish_level.py` — Adds SkyLight, ExponentialHeightFog, PostProcessVolume, NavMeshBoundsVolume
-- After running: Build Paths in editor for nav mesh, then PIE test
+Material graph and level polish have been applied (scripts 11–12 ran + manual fixes).
 
-### Milestone 2: Next Up — "The Threat"
+### Milestone 2: "The Threat" — Plan
 
-- AI "Corrupted Cube" enemy with `AIPerception` hearing-based detection
-- Enemy pawn + AI controller + behavior tree
-- Slam attracts enemies (high priority), Drop attracts within short radius (low priority)
-- Game over / restart on player-enemy collision
+**Approach:** Lightweight C++ state machine in `AAIController` with `UAIPerceptionComponent` (hearing sense). No Behavior Tree — 3 states are simple enough for C++.
+
+**New C++ files (all under `Source/NeoNexusOne/AI/`):**
+
+| File | Class | Inherits | Purpose |
+|------|-------|----------|---------|
+| `EchoEnemyPawn.h/.cpp` | `AEchoEnemyPawn` | `APawn` | Corrupted Cube: box collision, cube mesh, kill overlap sphere, `UFloatingPawnMovement` |
+| `EchoAIController.h/.cpp` | `AEchoAIController` | `AAIController` | Hearing perception + Idle/Investigating/Returning state machine |
+
+**Modified files:**
+
+| File | Changes |
+|------|---------|
+| `Core/EchoTypes.h` | Add `EEchoAIState` enum (Idle, Investigating, Returning) + AI constants in `EchoDefaults` |
+| `Core/EchoGameMode.h/.cpp` | Add `TriggerGameOver()` — restarts current level via `UGameplayStatics::OpenLevel` |
+
+**AI behavior:**
+- Hearing perception receives `MakeNoise()` that `AEchoPawn` already emits on impact
+- Slam (strength 1.0): always investigate, move to impact location
+- Drop (strength 0.5): investigate only if Idle and within Drop radius
+- At target: linger 5s, then return to spawn point
+- New stimulus always overrides current target
+- Kill: `USphereComponent` overlap with player → `TriggerGameOver()`
+
+**Editor work (after C++ compiles):**
+1. Create `BP_EchoEnemyPawn` at `Content/EchoLocation/AI/` (parent: `EchoEnemyPawn`)
+2. Set CubeMesh to Cube, apply Echo material (or red variant)
+3. Verify NavMesh in L_EchoPrototype (press P to visualize)
+4. Place 2–3 enemies on the floor, PIE test

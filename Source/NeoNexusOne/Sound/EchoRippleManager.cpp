@@ -5,6 +5,8 @@
 #include "Materials/MaterialParameterCollection.h"
 #include "Curves/CurveFloat.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogEchoRipple, Log, All);
+
 UEchoRippleManager::UEchoRippleManager()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -17,7 +19,7 @@ void UEchoRippleManager::BeginPlay()
 
 	if (!EchoMPC)
 	{
-		UE_LOG(LogTemp, Error, TEXT("EchoRippleManager: EchoMPC is null! Ripples will not be visible."));
+		UE_LOG(LogEchoRipple, Error, TEXT("EchoRippleManager: EchoMPC is null! Ripples will not be visible."));
 	}
 
 	if (RippleRadiusCurve)
@@ -29,7 +31,7 @@ void UEchoRippleManager::BeginPlay()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EchoRippleManager: RippleRadiusCurve is not set! Ripples will not animate."));
+		UE_LOG(LogEchoRipple, Warning, TEXT("EchoRippleManager: RippleRadiusCurve is not set! Ripples will not animate."));
 	}
 
 	if (RippleIntensityCurve)
@@ -64,6 +66,12 @@ void UEchoRippleManager::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UEchoRippleManager::TriggerRipple(const FEchoRippleEvent& Event)
 {
+	UE_LOG(LogEchoRipple, Warning, TEXT("TriggerRipple: Location=(%s) MaxRadius=%.1f Intensity=%.1f MPC=%s RadiusCurve=%s IntensityCurve=%s"),
+		*Event.ImpactLocation.ToString(), Event.MaxRadius, Event.Intensity,
+		EchoMPC ? TEXT("SET") : TEXT("NULL"),
+		RippleRadiusCurve ? TEXT("SET") : TEXT("NULL"),
+		RippleIntensityCurve ? TEXT("SET") : TEXT("NULL"));
+
 	ActiveEvent = Event;
 	bRippleActive = true;
 	CachedRadius = 0.0f;
@@ -105,6 +113,7 @@ void UEchoRippleManager::UpdateMPC(const FVector& Location, float Radius, float 
 {
 	if (!EchoMPC)
 	{
+		UE_LOG(LogEchoRipple, Error, TEXT("UpdateMPC: EchoMPC is NULL — ripple will not be visible!"));
 		return;
 	}
 
@@ -113,6 +122,9 @@ void UEchoRippleManager::UpdateMPC(const FVector& Location, float Radius, float 
 	{
 		return;
 	}
+
+	UE_LOG(LogEchoRipple, Log, TEXT("UpdateMPC: Location=(%s) Radius=%.1f Intensity=%.2f"),
+		*Location.ToString(), Radius, Intensity);
 
 	// MPC vectors are passed as FLinearColor (XYZW) — pack our FVector into RGB, W unused
 	UKismetMaterialLibrary::SetVectorParameterValue(

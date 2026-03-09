@@ -13,6 +13,8 @@
 #include "Core/EchoGameMode.h"
 #include "Sound/EchoRippleManager.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogEchoPawn, Log, All);
+
 AEchoPawn::AEchoPawn()
 {
 	// Box collision as root — 50cm half-extent cube
@@ -115,6 +117,8 @@ void AEchoPawn::HandleSlam(const FInputActionValue& Value)
 
 void AEchoPawn::OnImpact(EEchoMovementState State, FVector Location)
 {
+	UE_LOG(LogEchoPawn, Warning, TEXT("OnImpact: State=%d Location=(%s)"), static_cast<int32>(State), *Location.ToString());
+
 	// Build ripple event based on impact type
 	FEchoRippleEvent RippleEvent;
 	RippleEvent.ImpactLocation = Location;

@@ -3,6 +3,8 @@
 #include "Player/EchoMovementComponent.h"
 #include "GameFramework/Actor.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogEchoMovement, Log, All);
+
 UEchoMovementComponent::UEchoMovementComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -54,14 +56,21 @@ void UEchoMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 		FVector DesiredMovement = (ForwardDir * PendingInput.Y + RightDir * PendingInput.X) * GlideSpeed;
 
-		// Hover: interpolate Z toward HoverHeight above ground
+		// Hover: always interpolate Z toward HoverHeight above ground
+		// TargetZ = FloorZ + BoxHalfHeight + HoverHeight (so the bottom of the box clears the floor by HoverHeight)
 		float FloorZ;
 		if (CheckGroundContact(FloorZ))
 		{
-			const float TargetZ = FloorZ + HoverHeight;
+			const float BoxHalfHeight = 50.0f;
+			const float TargetZ = FloorZ + BoxHalfHeight + HoverHeight;
 			const float CurrentZ = UpdatedComponent->GetComponentLocation().Z;
 			const float NewZ = FMath::FInterpTo(CurrentZ, TargetZ, DeltaTime, HoverInterpSpeed);
 			DesiredMovement.Z = (NewZ - CurrentZ) / DeltaTime;
+		}
+		else
+		{
+			UE_LOG(LogEchoMovement, Warning, TEXT("CheckGroundContact failed — no floor detected below pawn at %s"),
+				*UpdatedComponent->GetComponentLocation().ToString());
 		}
 
 		CurrentVelocity = FVector(DesiredMovement.X, DesiredMovement.Y, DesiredMovement.Z);
@@ -71,19 +80,15 @@ void UEchoMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		{
 			FHitResult Hit;
 			SafeMoveUpdatedComponent(Delta, UpdatedComponent->GetComponentRotation(), true, Hit);
+		}
 
-			if (PendingInput.IsNearlyZero())
-			{
-				CurrentState = EEchoMovementState::Idle;
-			}
-			else
-			{
-				CurrentState = EEchoMovementState::Glide;
-			}
+		if (PendingInput.IsNearlyZero())
+		{
+			CurrentState = EEchoMovementState::Idle;
 		}
 		else
 		{
-			CurrentState = EEchoMovementState::Idle;
+			CurrentState = EEchoMovementState::Glide;
 		}
 
 		// Consume input
@@ -115,18 +120,25 @@ bool UEchoMovementComponent::CheckGroundContact(float& OutFloorZ) const
 	}
 
 	const FVector Start = UpdatedComponent->GetComponentLocation();
-	const FVector End = Start - FVector(0.0f, 0.0f, HoverHeight + GroundTraceThreshold);
+	// Trace far enough to find the floor from any height (spawn, post-slam, etc.)
+	const FVector End = Start - FVector(0.0f, 0.0f, 500.0f);
 
 	FHitResult Hit;
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(PawnOwner);
 
-	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+	// Trace against WorldStatic and WorldDynamic object types — covers all level geometry
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+
+	if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, ObjectParams, Params))
 	{
 		OutFloorZ = Hit.ImpactPoint.Z;
 		return true;
 	}
 
+	UE_LOG(LogEchoMovement, Warning, TEXT("CheckGroundContact: No hit — Start=%s End=%s"), *Start.ToString(), *End.ToString());
 	OutFloorZ = 0.0f;
 	return false;
 }
