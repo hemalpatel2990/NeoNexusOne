@@ -58,7 +58,10 @@ struct FEchoRippleEvent
 namespace EchoDefaults
 {
 	// Movement
-	constexpr float GlideHoverHeight = 20.0f;
+	constexpr float IdleHoverHeight = 20.0f;
+	constexpr float GlideHoverHeight = 75.0f;
+	constexpr float HoverRiseSpeed = 15.0f;
+	constexpr float HoverDropSpeed = 10.0f;
 
 	// Ripple radii
 	constexpr float DropRippleRadius = 800.0f;

@@ -26,10 +26,16 @@ public:
 	float GlideSpeed = 600.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Movement")
-	float HoverHeight = EchoDefaults::GlideHoverHeight;
+	float IdleHoverHeight = EchoDefaults::IdleHoverHeight;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Movement")
-	float HoverInterpSpeed = 10.0f;
+	float GlideHoverHeight = EchoDefaults::GlideHoverHeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Movement")
+	float HoverRiseSpeed = EchoDefaults::HoverRiseSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Movement")
+	float HoverDropSpeed = EchoDefaults::HoverDropSpeed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Movement")
 	FVector SlamJumpImpulse = FVector(0.0f, 0.0f, 1200.0f);
@@ -64,6 +70,8 @@ private:
 	FVector CurrentVelocity = FVector::ZeroVector;
 	FVector2D PendingInput = FVector2D::ZeroVector;
 
-	bool CheckGroundContact(float& OutFloorZ) const;
-	void HandleLanding(const FVector& ImpactLocation);
+	bool FindFloorBelow(float& OutFloorZ) const;
+	bool IsNearGround(float& OutFloorZ) const;
+	void HandleSlamLanding(const FVector& ImpactLocation);
+	void HandleDropLanding();
 };

@@ -20,35 +20,77 @@ void UEchoMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		return;
 	}
 
-	const bool bIsAirborne = (CurrentState == EEchoMovementState::Drop ||
-		CurrentState == EEchoMovementState::SlamJump);
+	const float BoxHalfHeight = 50.0f;
 
-	if (bIsAirborne)
+	switch (CurrentState)
 	{
-		// Apply gravity
+	case EEchoMovementState::SlamJump:
+	{
+		// Full gravity fall to the floor
 		CurrentVelocity.Z -= 980.0f * GravityScale * DeltaTime;
 
-		// Move the pawn
 		const FVector Delta = CurrentVelocity * DeltaTime;
 		FHitResult Hit;
 		SafeMoveUpdatedComponent(Delta, UpdatedComponent->GetComponentRotation(), true, Hit);
 
 		if (Hit.bBlockingHit)
 		{
-			HandleLanding(Hit.ImpactPoint);
+			HandleSlamLanding(Hit.ImpactPoint);
 			return;
 		}
 
-		// Check ground contact via line trace
 		float FloorZ;
-		if (CheckGroundContact(FloorZ))
+		if (IsNearGround(FloorZ))
 		{
-			HandleLanding(UpdatedComponent->GetComponentLocation());
+			HandleSlamLanding(FVector(UpdatedComponent->GetComponentLocation().X,
+				UpdatedComponent->GetComponentLocation().Y, FloorZ));
 		}
+		break;
 	}
-	else
+
+	case EEchoMovementState::Drop:
 	{
-		// Glide mode: apply XY movement from input
+		// Falling from glide height toward idle height
+		float FloorZ;
+		if (FindFloorBelow(FloorZ))
+		{
+			const float TargetZ = FloorZ + BoxHalfHeight + IdleHoverHeight;
+			const float CurrentZ = UpdatedComponent->GetComponentLocation().Z;
+
+			// Check if we've reached idle hover height
+			if (CurrentZ <= TargetZ + 1.0f)
+			{
+				// Snap to idle height and trigger drop ripple
+				const FVector SnapDelta = FVector(0.0f, 0.0f, TargetZ - CurrentZ);
+				FHitResult Hit;
+				SafeMoveUpdatedComponent(SnapDelta, UpdatedComponent->GetComponentRotation(), true, Hit);
+				HandleDropLanding();
+				return;
+			}
+
+			// Fall toward idle height under gravity
+			CurrentVelocity.Z -= 980.0f * GravityScale * DeltaTime;
+			const FVector Delta = CurrentVelocity * DeltaTime;
+			FHitResult Hit;
+			SafeMoveUpdatedComponent(Delta, UpdatedComponent->GetComponentRotation(), true, Hit);
+
+			// Clamp: don't overshoot below idle height
+			const float NewZ = UpdatedComponent->GetComponentLocation().Z;
+			if (NewZ < TargetZ)
+			{
+				const FVector Correction = FVector(0.0f, 0.0f, TargetZ - NewZ);
+				SafeMoveUpdatedComponent(Correction, UpdatedComponent->GetComponentRotation(), true, Hit);
+				HandleDropLanding();
+			}
+		}
+		break;
+	}
+
+	case EEchoMovementState::Glide:
+	case EEchoMovementState::Idle:
+	default:
+	{
+		// XY movement from input
 		const FRotator ControlRotation = PawnOwner->GetControlRotation();
 		const FRotator YawRotation(0.0f, ControlRotation.Yaw, 0.0f);
 		const FVector ForwardDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
@@ -56,24 +98,22 @@ void UEchoMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 		FVector DesiredMovement = (ForwardDir * PendingInput.Y + RightDir * PendingInput.X) * GlideSpeed;
 
-		// Hover: always interpolate Z toward HoverHeight above ground
-		// TargetZ = FloorZ + BoxHalfHeight + HoverHeight (so the bottom of the box clears the floor by HoverHeight)
+		const bool bHasInput = !PendingInput.IsNearlyZero();
+
+		// Choose target height and interp speed based on whether we have input
+		const float TargetHoverHeight = bHasInput ? GlideHoverHeight : IdleHoverHeight;
+		const float InterpSpeed = bHasInput ? HoverRiseSpeed : HoverDropSpeed;
+
 		float FloorZ;
-		if (CheckGroundContact(FloorZ))
+		if (FindFloorBelow(FloorZ))
 		{
-			const float BoxHalfHeight = 50.0f;
-			const float TargetZ = FloorZ + BoxHalfHeight + HoverHeight;
+			const float TargetZ = FloorZ + BoxHalfHeight + TargetHoverHeight;
 			const float CurrentZ = UpdatedComponent->GetComponentLocation().Z;
-			const float NewZ = FMath::FInterpTo(CurrentZ, TargetZ, DeltaTime, HoverInterpSpeed);
+			const float NewZ = FMath::FInterpTo(CurrentZ, TargetZ, DeltaTime, InterpSpeed);
 			DesiredMovement.Z = (NewZ - CurrentZ) / DeltaTime;
 		}
-		else
-		{
-			UE_LOG(LogEchoMovement, Warning, TEXT("CheckGroundContact failed — no floor detected below pawn at %s"),
-				*UpdatedComponent->GetComponentLocation().ToString());
-		}
 
-		CurrentVelocity = FVector(DesiredMovement.X, DesiredMovement.Y, DesiredMovement.Z);
+		CurrentVelocity = DesiredMovement;
 
 		const FVector Delta = CurrentVelocity * DeltaTime;
 		if (!Delta.IsNearlyZero())
@@ -82,17 +122,22 @@ void UEchoMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			SafeMoveUpdatedComponent(Delta, UpdatedComponent->GetComponentRotation(), true, Hit);
 		}
 
-		if (PendingInput.IsNearlyZero())
-		{
-			CurrentState = EEchoMovementState::Idle;
-		}
-		else
+		// Transition: input starts → Glide, input stops → Drop (which falls to idle)
+		if (bHasInput)
 		{
 			CurrentState = EEchoMovementState::Glide;
 		}
+		else if (CurrentState == EEchoMovementState::Glide)
+		{
+			// Just stopped moving — enter Drop to fall back to idle height
+			CurrentState = EEchoMovementState::Drop;
+			CurrentVelocity = FVector::ZeroVector;
+		}
+		// If already Idle, stay Idle
 
-		// Consume input
 		PendingInput = FVector2D::ZeroVector;
+		break;
+	}
 	}
 }
 
@@ -103,16 +148,16 @@ void UEchoMovementComponent::AddGlideInput(FVector2D Input)
 
 void UEchoMovementComponent::RequestSlamJump()
 {
-	if (CurrentState == EEchoMovementState::Drop || CurrentState == EEchoMovementState::SlamJump)
+	if (CurrentState == EEchoMovementState::SlamJump)
 	{
-		return; // Already airborne
+		return; // Already slamming
 	}
 
 	CurrentVelocity = SlamJumpImpulse;
 	CurrentState = EEchoMovementState::SlamJump;
 }
 
-bool UEchoMovementComponent::CheckGroundContact(float& OutFloorZ) const
+bool UEchoMovementComponent::FindFloorBelow(float& OutFloorZ) const
 {
 	if (!UpdatedComponent)
 	{
@@ -120,14 +165,12 @@ bool UEchoMovementComponent::CheckGroundContact(float& OutFloorZ) const
 	}
 
 	const FVector Start = UpdatedComponent->GetComponentLocation();
-	// Trace far enough to find the floor from any height (spawn, post-slam, etc.)
 	const FVector End = Start - FVector(0.0f, 0.0f, 500.0f);
 
 	FHitResult Hit;
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(PawnOwner);
 
-	// Trace against WorldStatic and WorldDynamic object types — covers all level geometry
 	FCollisionObjectQueryParams ObjectParams;
 	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
 	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
@@ -138,22 +181,53 @@ bool UEchoMovementComponent::CheckGroundContact(float& OutFloorZ) const
 		return true;
 	}
 
-	UE_LOG(LogEchoMovement, Warning, TEXT("CheckGroundContact: No hit — Start=%s End=%s"), *Start.ToString(), *End.ToString());
 	OutFloorZ = 0.0f;
 	return false;
 }
 
-void UEchoMovementComponent::HandleLanding(const FVector& ImpactLocation)
+bool UEchoMovementComponent::IsNearGround(float& OutFloorZ) const
 {
-	// Determine impact type based on Z velocity before landing
-	const float ImpactSpeed = FMath::Abs(CurrentVelocity.Z);
-	const EEchoMovementState ImpactState =
-		(ImpactSpeed >= SlamVelocityThreshold) ? EEchoMovementState::SlamJump : EEchoMovementState::Drop;
+	if (!UpdatedComponent)
+	{
+		return false;
+	}
 
-	// Reset velocity and state
+	const FVector PawnLocation = UpdatedComponent->GetComponentLocation();
+	const float BoxHalfHeight = 50.0f;
+	const FVector Start = PawnLocation - FVector(0.0f, 0.0f, BoxHalfHeight);
+	const FVector End = Start - FVector(0.0f, 0.0f, GroundTraceThreshold);
+
+	FHitResult Hit;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(PawnOwner);
+
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+
+	if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, ObjectParams, Params))
+	{
+		OutFloorZ = Hit.ImpactPoint.Z;
+		return true;
+	}
+
+	return false;
+}
+
+void UEchoMovementComponent::HandleSlamLanding(const FVector& ImpactLocation)
+{
 	CurrentVelocity = FVector::ZeroVector;
 	CurrentState = EEchoMovementState::Idle;
 
-	// Broadcast impact event
-	OnEchoImpact.Broadcast(ImpactState, ImpactLocation);
+	// Big slam ripple
+	OnEchoImpact.Broadcast(EEchoMovementState::SlamJump, ImpactLocation);
+}
+
+void UEchoMovementComponent::HandleDropLanding()
+{
+	CurrentVelocity = FVector::ZeroVector;
+	CurrentState = EEchoMovementState::Idle;
+
+	// Small drop ripple at current location
+	OnEchoImpact.Broadcast(EEchoMovementState::Drop, UpdatedComponent->GetComponentLocation());
 }
