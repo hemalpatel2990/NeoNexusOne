@@ -1,40 +1,40 @@
 # Status: NeoNexusOne — Echo-Location
 
 ## Current Milestone
-**Milestone 2: "The Threat" — IN PROGRESS**
-*Goal: Implement enemy AI (Corrupted Cubes) reacting to player-generated noise.*
+**Milestone 2: "The Technical Foundation" — **COMPLETE**
+*Goal: Rebuild the technical foundation using an Unlit, shader-driven blueprint aesthetic.*
 
 ---
 
 ## Roadmap
 
-### Milestone 1: "The Greybox" — **COMPLETE**
-*   [x] Basic cube movement state machine (Idle, Glide, Drop, SlamJump).
-*   [x] Timeline-driven Vision Ripple system via MPC.
-*   [x] Enhanced Input integration (Move, Look, Slam).
-*   [x] Sound-Vision feedback (Camera shakes + haptics).
-*   [x] Core C++ foundation (GameMode, PlayerController, Pawn).
+### Milestone 1: "The Technical Pivot" — **COMPLETE**
+*   [x] Re-evaluated and pivoted to **Shader-First, Unlit Pipeline**.
+*   [x] Locked global exposure (EV100 = 1.0) and disabled standard engine lighting/Lumen.
+*   [x] Rebuilt `M_EchoMaster` as an Unlit, procedural 3D grid shader.
+*   [x] Implemented automatic 3D wireframe edges via UV logic (Cube-optimized).
+*   [x] Implemented "Energy Wave" ring with Digital Scan Decay.
+*   [x] Verified "Sound-Vision" loop with the new "Cinematic Sonar" aesthetic.
 
-### Milestone 2: "The Threat" — **IN PROGRESS**
-*   [ ] `AEchoEnemyPawn`: AI cube with navigation and kill logic.
-*   [ ] `AEchoAIController`: Perception-driven state machine (Idle/Investigating/Returning).
-*   [ ] Navigation Mesh setup in `L_EchoPrototype`.
-*   [ ] Noise prioritization (Slam > Drop).
+### Milestone 2: "Universal Visuals & HUD" — **IN PROGRESS**
+*   [ ] **Post-Process Edge Detection**: Build a Screen-Space shader to support complex models (monsters, rubble).
+*   [ ] `WBP_EchoHUD`: Minimalist "Hacker's View" UI for signal strength and mapping progress.
+*   [ ] `AEchoPlayerController`: C++ logic for signal decay and proximity interference.
+*   [ ] Modular Level Kit: Create 3-4 simple "Blueprint" props for level building.
 
-### Milestone 3: "The Puzzle" — **PLANNED**
-*   [ ] Glide-only navigation through dark obstacles.
-*   [ ] Level hazards and puzzle triggers.
-*   [ ] Movement-based vision persistence tuning.
+### Milestone 3: "The Mapping Puzzle" — **PLANNED**
+*   [ ] Zone-based mapping triggers (exploring the dark increases percentage).
+*   [ ] Directional sonar "pings" for tactical scanning.
+*   [ ] Data Key / Exit Port objective loop.
 
-### Milestone 4: "Atmosphere" — **PLANNED**
-*   [ ] 3D spatial audio (reverb/echo matching ripple size).
-*   [ ] Post-processing effects (vignette/distortion).
-*   [ ] Visual polish (Corrupted Cube aesthetic).
+### Milestone 4: "Atmosphere & Polish" — **PLANNED**
+*   [ ] 3D spatial audio reverb matching the "grid" size.
+*   [ ] Post-process glitch effects tied to enemy proximity.
 
 ---
 
 ## Technical Health
 *   **Engine:** Unreal Engine 5.6
-*   **Build Status:** Clean (Milestone 1 verified)
-*   **Last Review:** `reviews/Code-Review.md` (Consulted and synced)
-*   **Pending Tasks:** AI implementation starts next.
+*   **Visual Strategy:** 100% Unlit, Procedural Sonar (Math-driven visuals).
+*   **Build Status:** Clean. Foundation is robust and cinematic.
+*   **Next Priority:** Implementing Post-Process Edge Detection for complex models.
