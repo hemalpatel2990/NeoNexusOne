@@ -78,6 +78,7 @@ namespace EchoDefaults
 	// Camera
 	constexpr float CameraPitchMin = -70.0f;  // Look up limit (generous for spatial awareness)
 	constexpr float CameraPitchMax = 20.0f;   // Look down limit (restricted to avoid under-floor view)
+	constexpr float DefaultMouseSensitivity = 1.0f;
 
 	// AI behavior
 	constexpr float AIMovementSpeed = 400.0f;

@@ -65,8 +65,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Echo|Input")
 	TObjectPtr<UInputAction> IA_Slam;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Input")
-	float MouseSensitivity = 1.0f;
+	/** Multiplier for mouse look input. Tunable per-instance at runtime. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Input", meta = (ClampMin = "0.01", UIMax = "5.0"))
+	float MouseSensitivity = EchoDefaults::DefaultMouseSensitivity;
 
 private:
 	// --- Input Handlers ---
