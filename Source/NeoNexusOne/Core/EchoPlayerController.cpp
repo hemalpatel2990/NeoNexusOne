@@ -1,6 +1,7 @@
 // Copyright NeoNexusOne. All Rights Reserved.
 
 #include "Core/EchoPlayerController.h"
+#include "Core/EchoTypes.h"
 #include "EnhancedInputSubsystems.h"
 
 void AEchoPlayerController::BeginPlay()
@@ -24,7 +25,7 @@ void AEchoPlayerController::BeginPlay()
 	// Clamp pitch to prevent camera flipping
 	if (PlayerCameraManager)
 	{
-		PlayerCameraManager->ViewPitchMin = -70.0f;
-		PlayerCameraManager->ViewPitchMax = 20.0f;
+		PlayerCameraManager->ViewPitchMin = EchoDefaults::CameraPitchMin;
+		PlayerCameraManager->ViewPitchMax = EchoDefaults::CameraPitchMax;
 	}
 }

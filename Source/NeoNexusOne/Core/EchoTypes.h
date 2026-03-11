@@ -75,6 +75,10 @@ namespace EchoDefaults
 	constexpr float DropNoiseVolume = 0.5f;
 	constexpr float SlamNoiseVolume = 1.0f;
 
+	// Camera
+	constexpr float CameraPitchMin = -70.0f;  // Look up limit (generous for spatial awareness)
+	constexpr float CameraPitchMax = 20.0f;   // Look down limit (restricted to avoid under-floor view)
+
 	// AI behavior
 	constexpr float AIMovementSpeed = 400.0f;
 	constexpr float AIHearingRange = 3000.0f;
