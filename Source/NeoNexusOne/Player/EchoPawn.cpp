@@ -103,8 +103,8 @@ void AEchoPawn::HandleMove(const FInputActionValue& Value)
 void AEchoPawn::HandleLook(const FInputActionValue& Value)
 {
 	const FVector2D Input = Value.Get<FVector2D>();
-	AddControllerYawInput(Input.X);
-	AddControllerPitchInput(Input.Y);
+	AddControllerYawInput(Input.X * MouseSensitivity);
+	AddControllerPitchInput(Input.Y * MouseSensitivity);
 }
 
 void AEchoPawn::HandleSlam(const FInputActionValue& Value)

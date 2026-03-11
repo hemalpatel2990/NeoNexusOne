@@ -65,6 +65,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Echo|Input")
 	TObjectPtr<UInputAction> IA_Slam;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Input")
+	float MouseSensitivity = 1.0f;
+
 private:
 	// --- Input Handlers ---
 	void HandleMove(const FInputActionValue& Value);
