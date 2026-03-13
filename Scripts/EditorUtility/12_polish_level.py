@@ -115,9 +115,6 @@ def _polish_level():
     if ppv_actor:
         ppv_actor.set_editor_property("unbound", True)
         
-        # Load the Material
-        pp_mat = unreal.load_asset(Paths.M_ECHO_POST_PROCESS)
-        
         # We will attempt to set the settings as a batch to bypass protected member errors
         new_settings = {
             "override_auto_exposure_method": True,
@@ -130,22 +127,11 @@ def _polish_level():
             "vignette_intensity": 0.6
         }
         
-        # Note: If blendables still fails, we'll log a manual instruction
-        if pp_mat:
-            try:
-                # Attempting to construct the blendables array
-                wb = unreal.WeightedBlendables(array=[unreal.WeightedBlendable(weight=1.0, object=pp_mat)])
-                new_settings["blendables"] = wb
-                unreal.log(f"[EchoSetup] Attempting to assign {Paths.M_ECHO_POST_PROCESS} via dictionary...")
-            except Exception as e:
-                unreal.log_warning(f"[EchoSetup] Could not prepare blendables dictionary: {e}")
-
         try:
             ppv_actor.set_editor_properties({"settings": new_settings})
             unreal.log("[EchoSetup] Applied PostProcessSettings successfully")
         except Exception as e:
             unreal.log_warning(f"[EchoSetup] Failed to apply settings via dictionary: {e}")
-            log_manual(f"Select EchoPPV > Post Process Sections > Rendering Features > Post Process Materials > Array > Add {Paths.M_ECHO_POST_PROCESS}")
     else:
         unreal.log_warning("[EchoSetup] Could not find or create EchoPPV")
 

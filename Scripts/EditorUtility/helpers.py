@@ -41,7 +41,6 @@ class Paths:
 
     # Material
     M_ECHO_MASTER        = f"{BASE}/Materials/M_EchoMaster"
-    M_ECHO_POST_PROCESS  = f"{BASE}/Materials/M_EchoPostProcess"
     MI_ECHO_MASTER       = f"{BASE}/Materials/MI_EchoMaster"
 
     # Level
