@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
+using System.IO;
 
 public class NeoNexusOne : ModuleRules
 {
@@ -8,7 +9,14 @@ public class NeoNexusOne : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicIncludePaths.AddRange(new string[] { ModuleDirectory });
+		PublicIncludePaths.AddRange(new string[] { 
+			ModuleDirectory,
+			Path.Combine(ModuleDirectory, "Public") 
+		});
+
+		PrivateIncludePaths.AddRange(new string[] {
+			Path.Combine(ModuleDirectory, "Private")
+		});
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
