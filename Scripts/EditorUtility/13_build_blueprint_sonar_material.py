@@ -3,9 +3,7 @@
 
 This script creates the M_EchoMaster material that uses
 procedurally generated Blueprint Sonar math (Unlit, World Grid, Contact Shadows, 
-and the Ripple Mask combination logic). 
-
-Note: UV Wireframe has been removed as it is now handled by Post-Process Edge Detection.
+Geometric Derivative Edges with 3D Jitter, and the Ripple Mask combination logic). 
 """
 
 import unreal
@@ -144,23 +142,106 @@ def run():
     mel.connect_material_expressions(cont_dist, "", cont_div, "A"); mel.connect_material_expressions(cont_thick, "", cont_div, "B")
     cont_sat = mel.create_material_expression(material, unreal.MaterialExpressionSaturate, -550, 900); mel.connect_material_expressions(cont_div, "", cont_sat, "")
     cont_one_minus = mel.create_material_expression(material, unreal.MaterialExpressionOneMinus, -400, 900); mel.connect_material_expressions(cont_sat, "", cont_one_minus, "")
+
+    # =====================================================================
+    # BLOCK 4: GEOMETRIC EDGES (fwidth Normal)
+    # =====================================================================
+    unreal.log("Building Geometric Edges...")
+    edge_code = """
+float3 N = normalize(Parameters.WorldNormal);
+float Edge = length(fwidth(N));
+
+// Normalize width by distance so edges stay crisp
+float Dist = length(Parameters.WorldPosition - View.WorldCameraOrigin);
+float NormalizedEdge = Edge * (EdgeSensitivity / (Dist * 0.001 + 1.0));
+
+return saturate(NormalizedEdge);
+"""
+    edge_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -900, 1200)
+    edge_node.set_editor_property("code", edge_code)
+    edge_node.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
     
+    edge_sens = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1100, 1300)
+    edge_sens.set_editor_property("parameter_name", unreal.Name("EdgeSensitivity"))
+    edge_sens.set_editor_property("default_value", 10.0)
+    
+    # Custom node inputs
+    sens_input = unreal.CustomInput()
+    sens_input.set_editor_property("input_name", "EdgeSensitivity")
+    edge_node.set_editor_property("inputs", [sens_input])
+    
+    mel.connect_material_expressions(edge_sens, "", edge_node, "EdgeSensitivity")
+
+    # Intensity-Gated 3D Jitter for Geometric Edges
+    jitter_int = mel.create_material_expression(material, unreal.MaterialExpressionCollectionParameter, -1100, 1450)
+    jitter_int.set_editor_property("collection", mpc)
+    jitter_int.set_editor_property("parameter_name", unreal.Name(MPCParams.DIGITAL_JITTER_INTENSITY))
+    
+    # 3D Noise based on WorldPosition
+    noise_wp = mel.create_material_expression(material, unreal.MaterialExpressionWorldPosition, -1300, 1500)
+    time_node_noise = mel.create_material_expression(material, unreal.MaterialExpressionTime, -1300, 1600)
+    
+    noise_wp_add = mel.create_material_expression(material, unreal.MaterialExpressionAdd, -1100, 1550)
+    mel.connect_material_expressions(noise_wp, "", noise_wp_add, "A")
+    mel.connect_material_expressions(time_node_noise, "", noise_wp_add, "B")
+    
+    # Dot product for 3D noise (Pseudo-Random Hash)
+    noise_dot_3d = mel.create_material_expression(material, unreal.MaterialExpressionDotProduct, -900, 1550)
+    mel.connect_material_expressions(noise_wp_add, "", noise_dot_3d, "A")
+    dot_const_3d = mel.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -1000, 1650)
+    dot_const_3d.set_editor_property("default_value", unreal.LinearColor(12.9898, 78.233, 45.164, 0))
+    mel.connect_material_expressions(dot_const_3d, "", noise_dot_3d, "B")
+    
+    noise_sine_3d = mel.create_material_expression(material, unreal.MaterialExpressionSine, -750, 1550)
+    mel.connect_material_expressions(noise_dot_3d, "", noise_sine_3d, "")
+    
+    noise_frac_3d = mel.create_material_expression(material, unreal.MaterialExpressionFrac, -600, 1550)
+    mel.connect_material_expressions(noise_sine_3d, "", noise_frac_3d, "")
+    
+    # Jitter multiplier: 1.0 - (Frac * JitterIntensity)
+    jitter_mul_3d = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, -450, 1500)
+    mel.connect_material_expressions(noise_frac_3d, "", jitter_mul_3d, "A")
+    mel.connect_material_expressions(jitter_int, "", jitter_mul_3d, "B")
+    
+    jitter_inv_3d = mel.create_material_expression(material, unreal.MaterialExpressionOneMinus, -300, 1500)
+    mel.connect_material_expressions(jitter_mul_3d, "", jitter_inv_3d, "")
+    
+    # Apply jitter to edge_node
+    edge_jittered = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, -150, 1200)
+    mel.connect_material_expressions(edge_node, "", edge_jittered, "A")
+    mel.connect_material_expressions(jitter_inv_3d, "", edge_jittered, "B")
+
     # =====================================================================
     # FINAL COMBINE
     # =====================================================================
     unreal.log("Wiring Final Combine...")
     
-    # Blueprint Detail = Grid + Contact (Wireframe removed)
-    detail_sum = mel.create_material_expression(material, unreal.MaterialExpressionAdd, 150, 600); mel.connect_material_expressions(grid_add2, "", detail_sum, "A"); mel.connect_material_expressions(cont_one_minus, "", detail_sum, "B")
+    # Blueprint Detail = Grid + Contact + GeometricEdges
+    detail_sum = mel.create_material_expression(material, unreal.MaterialExpressionAdd, 150, 600)
+    mel.connect_material_expressions(grid_add2, "", detail_sum, "A")
+    mel.connect_material_expressions(cont_one_minus, "", detail_sum, "B")
+    
+    detail_total = mel.create_material_expression(material, unreal.MaterialExpressionAdd, 350, 600)
+    mel.connect_material_expressions(detail_sum, "", detail_total, "A")
+    mel.connect_material_expressions(edge_jittered, "", detail_total, "B")
     
     # Detail is only visible where the sonar has reached
-    detail_masked = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, 500, 500); mel.connect_material_expressions(detail_sum, "", detail_masked, "A"); mel.connect_material_expressions(final_geo_mask, "", detail_masked, "B")
+    detail_masked = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, 550, 500)
+    mel.connect_material_expressions(detail_total, "", detail_masked, "A")
+    mel.connect_material_expressions(final_geo_mask, "", detail_masked, "B")
     
     # Final Visual = Max(Masked Detail, Sharp Wave Ring)
-    final_visual = mel.create_material_expression(material, unreal.MaterialExpressionMax, 700, 400); mel.connect_material_expressions(detail_masked, "", final_visual, "A"); mel.connect_material_expressions(final_wave_ring, "", final_visual, "B")
+    final_visual = mel.create_material_expression(material, unreal.MaterialExpressionMax, 750, 400)
+    mel.connect_material_expressions(detail_masked, "", final_visual, "A")
+    mel.connect_material_expressions(final_wave_ring, "", final_visual, "B")
     
-    blueprint_color = mel.create_material_expression(material, unreal.MaterialExpressionVectorParameter, 700, 600); blueprint_color.set_editor_property("parameter_name", unreal.Name("BlueprintColor")); blueprint_color.set_editor_property("default_value", unreal.LinearColor(0.0, 1.0, 1.0, 1.0))
-    world_out = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, 900, 450); mel.connect_material_expressions(final_visual, "", world_out, "A"); mel.connect_material_expressions(blueprint_color, "", world_out, "B")
+    blueprint_color = mel.create_material_expression(material, unreal.MaterialExpressionVectorParameter, 750, 600)
+    blueprint_color.set_editor_property("parameter_name", unreal.Name("BlueprintColor"))
+    blueprint_color.set_editor_property("default_value", unreal.LinearColor(0.0, 1.0, 1.0, 1.0))
+    
+    world_out = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, 950, 450)
+    mel.connect_material_expressions(final_visual, "", world_out, "A")
+    mel.connect_material_expressions(blueprint_color, "", world_out, "B")
     
     mel.connect_material_property(world_out, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     
