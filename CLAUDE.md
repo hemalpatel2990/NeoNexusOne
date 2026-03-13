@@ -60,12 +60,13 @@ Source/NeoNexusOne/
 
 ## Key Technical Decisions
 
-- **Renderer:** DX12 with SM6, Lumen GI + reflections, Virtual Shadow Maps, ray tracing enabled, static lighting **disabled**
+- **Renderer:** DX12 with SM6, **100% Unlit pipeline** — Lumen, SkyLights, and all standard engine lights are **disabled**. Auto-exposure locked at EV100 = 1.0 via PostProcessVolume.
+- **Visual Strategy:** Shader-First, Procedural Sonar. `M_EchoMaster` is an Unlit material with a procedural 3D cyan grid (`WorldPosition` + `Frac`), wireframe edges via UV logic, and an "Energy Wave" ring with Digital Scan Decay driven by MPC.
 - **Input:** UE5 Enhanced Input system (not legacy input)
 - **Audio:** 48kHz sample rate, 1024 buffer frame size
 - **Player base class:** `APawn` (not `ACharacter`) — no skeletal mesh needed for a cube
 - **Ripple animation:** `FTimeline` + `UCurveFloat` in C++ with manual `TickTimeline()` calls. Timeline uses normalized 0→1 range with `SetPlayRate(1/RippleDuration)` to decouple curve authoring from duration
-- **Single active ripple** — new ripple overwrites current (acceptable for Milestone 1; future: MPC array or Niagara for multi-ripple)
+- **Single active ripple** — new ripple overwrites current (future: MPC array or Niagara for multi-ripple)
 
 ## Development Conventions
 
@@ -85,7 +86,8 @@ Source/NeoNexusOne/
 - Passive Drop: low priority, AI chases if within short radius
 
 ### Aesthetic
-- Minimalist "Greybox" aesthetic initially
+- **"Blueprint Sonar"** — Cyan-on-black, procedural 3D grid with wireframe edges revealed by sonar pulses
+- 100% Unlit, shader-driven: no engine lighting, no Lumen, no SkyLight
 - "Juice" elements: camera shake (subtle on Drop, violent on Slam), haptic feedback, audio-visual sync (ripple speed matches reverb tail)
 
 ## Debugging Guidelines
@@ -108,14 +110,18 @@ Source/NeoNexusOne/
 
 ## Development Milestones
 
-1. **"The Greybox"** — Cube movement + basic Drop vision *(COMPLETE)*
-2. **"The Threat"** — AI cubes reacting to Slam
-3. **"The Puzzle"** — Blind Gliding through obstacle levels
-4. **"Atmosphere"** — 3D spatial audio and post-processing
+1. **"The Technical Pivot"** — Shader-first unlit pipeline, procedural 3D grid, energy wave sonar *(COMPLETE)*
+2. **"Universal Visuals & HUD"** — Post-process edge detection, Hacker's View HUD, modular level kit *(IN PROGRESS)*
+3. **"The Mapping Puzzle"** — Zone-based mapping, directional sonar pings, Data Key / Exit Port objectives
+4. **"Atmosphere & Polish"** — 3D spatial audio reverb, post-process glitch effects tied to enemy proximity
 
-### Milestone 1: Complete
+### Earlier Work (Complete)
 
-C++ foundation and Editor assets are all in place. Code review issues have been resolved.
+**C++ foundation:** Movement system (Glide/Drop/Slam state machine), ripple manager (FTimeline + MPC), feedback component (camera shake + haptics), player controller (Enhanced Input), game mode.
+
+**AI foundation (C++ written, needs Editor setup):** `AEchoAIController` (hearing perception + Idle/Investigating/Returning state machine), `AEchoEnemyPawn` (box collision, cube mesh, kill overlap sphere, `UFloatingPawnMovement`), `TriggerGameOver()` on GameMode. Editor work still needed: BP_EchoEnemyPawn, NavMesh verification, enemy placement.
+
+**Visual pivot (Milestone 1):** Rebuilt `M_EchoMaster` as Unlit procedural sonar shader with 3D wireframe edges, "Energy Wave" ring, and Digital Scan Decay. Disabled all engine lighting.
 
 ```
 Content/EchoLocation/
@@ -128,36 +134,9 @@ Content/EchoLocation/
     Maps/          L_EchoPrototype
 ```
 
-Material graph and level polish have been applied (scripts 11–12 ran + manual fixes).
+### Milestone 2: "Universal Visuals & HUD" — Current
 
-### Milestone 2: "The Threat" — Plan
-
-**Approach:** Lightweight C++ state machine in `AAIController` with `UAIPerceptionComponent` (hearing sense). No Behavior Tree — 3 states are simple enough for C++.
-
-**New C++ files (all under `Source/NeoNexusOne/AI/`):**
-
-| File | Class | Inherits | Purpose |
-|------|-------|----------|---------|
-| `EchoEnemyPawn.h/.cpp` | `AEchoEnemyPawn` | `APawn` | Corrupted Cube: box collision, cube mesh, kill overlap sphere, `UFloatingPawnMovement` |
-| `EchoAIController.h/.cpp` | `AEchoAIController` | `AAIController` | Hearing perception + Idle/Investigating/Returning state machine |
-
-**Modified files:**
-
-| File | Changes |
-|------|---------|
-| `Core/EchoTypes.h` | Add `EEchoAIState` enum (Idle, Investigating, Returning) + AI constants in `EchoDefaults` |
-| `Core/EchoGameMode.h/.cpp` | Add `TriggerGameOver()` — restarts current level via `UGameplayStatics::OpenLevel` |
-
-**AI behavior:**
-- Hearing perception receives `MakeNoise()` that `AEchoPawn` already emits on impact
-- Slam (strength 1.0): always investigate, move to impact location
-- Drop (strength 0.5): investigate only if Idle and within Drop radius
-- At target: linger 5s, then return to spawn point
-- New stimulus always overrides current target
-- Kill: `USphereComponent` overlap with player → `TriggerGameOver()`
-
-**Editor work (after C++ compiles):**
-1. Create `BP_EchoEnemyPawn` at `Content/EchoLocation/AI/` (parent: `EchoEnemyPawn`)
-2. Set CubeMesh to Cube, apply Echo material (or red variant)
-3. Verify NavMesh in L_EchoPrototype (press P to visualize)
-4. Place 2–3 enemies on the floor, PIE test
+- **Post-Process Edge Detection:** Screen-space shader to support complex models (monsters, rubble) beyond UV-based wireframes
+- **WBP_EchoHUD:** Minimalist "Hacker's View" UI — signal strength bar, mapping progress counter, static interference overlays
+- **AEchoPlayerController:** Signal decay and proximity interference logic
+- **Modular Level Kit:** 3–4 simple "Blueprint" props for level building

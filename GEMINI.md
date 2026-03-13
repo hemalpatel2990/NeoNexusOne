@@ -5,7 +5,7 @@
 
 ### Main Technologies
 *   **Engine:** Unreal Engine 5.6
-*   **Visuals:** Custom "Echo" Shaders using Material Parameter Collections (MPC) and SphereMasks.
+*   **Visuals:** 100% Unlit, Procedural Sonar pipeline. Custom "Echo" Shaders using Material Parameter Collections (MPC), procedural 3D grids, UV-based wireframes, and Digital Scan Decay.
 *   **Input:** UE5 Enhanced Input system.
 *   **AI:** AI Perception / Pawn Sensing reacting to `MakeNoise()` events.
 *   **Audio:** 3D Spatial Audio and Audio Synesthesia (visuals matched to audio decay).
@@ -86,7 +86,8 @@ Source/NeoNexusOne/
 - **Kill:** Overlap with player triggers Game Over (restarts level).
 
 ### 4. Aesthetic Standards
-- Minimalist "Greybox" aesthetic.
+- **"Blueprint Sonar"** — Cyan-on-black, procedural 3D grid with wireframe edges revealed by sonar pulses.
+- 100% Unlit, shader-driven: no engine lighting, no Lumen, no SkyLight. Exposure locked at EV100 = 1.0.
 - Focus on "The Juice": synced camera shakes, haptics, and audio-visual decay.
 
 ---
@@ -108,7 +109,7 @@ Source/NeoNexusOne/
 
 ## Milestones
 
-1. **"The Greybox"** — Cube movement + basic Drop vision *(COMPLETE)*
-2. **"The Threat"** — AI cubes reacting to Slam *(IN PROGRESS)*
-3. **"The Puzzle"** — Blind Gliding through obstacle levels
-4. **"Atmosphere"** — 3D spatial audio and post-processing
+1. **"The Technical Pivot"** — Shader-first unlit pipeline, procedural 3D grid, energy wave sonar *(COMPLETE)*
+2. **"Universal Visuals & HUD"** — Post-process edge detection, Hacker's View HUD, modular level kit *(IN PROGRESS)*
+3. **"The Mapping Puzzle"** — Zone-based mapping, directional sonar pings, Data Key / Exit Port objectives
+4. **"Atmosphere & Polish"** — 3D spatial audio reverb, post-process glitch effects tied to enemy proximity

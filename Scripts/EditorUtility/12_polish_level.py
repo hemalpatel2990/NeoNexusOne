@@ -40,13 +40,12 @@ def _polish_level():
     level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
     level_subsystem.load_level(path)
 
-    editor_level_lib = unreal.EditorLevelLibrary
-    actors = editor_level_lib.get_all_level_actors()
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    actors = actor_subsystem.get_all_level_actors()
 
     # Check which polish actors already exist (idempotent)
     has_skylight = False
     has_fog = False
-    has_ppv = False
     has_navmesh = False
 
     for actor in actors:
@@ -55,15 +54,13 @@ def _polish_level():
             has_skylight = True
         elif label == "EchoFog":
             has_fog = True
-        elif label == "EchoPPV":
-            has_ppv = True
         elif label == "EchoNavMesh":
             has_navmesh = True
 
     # --- SkyLight ---
     if not has_skylight:
         try:
-            sky = editor_level_lib.spawn_actor_from_class(
+            sky = actor_subsystem.spawn_actor_from_class(
                 unreal.SkyLight, unreal.Vector(0, 0, 500)
             )
             if sky:
@@ -82,7 +79,7 @@ def _polish_level():
     # --- ExponentialHeightFog ---
     if not has_fog:
         try:
-            fog = editor_level_lib.spawn_actor_from_class(
+            fog = actor_subsystem.spawn_actor_from_class(
                 unreal.ExponentialHeightFog, unreal.Vector(0, 0, 0)
             )
             if fog:
@@ -101,52 +98,61 @@ def _polish_level():
         unreal.log("[EchoSetup] EchoFog already exists, skipping")
 
     # --- PostProcessVolume ---
-    if not has_ppv:
+    ppv_actor = None
+    for actor in actors:
+        if actor.get_actor_label() == "EchoPPV":
+            ppv_actor = actor
+            break
+
+    if not ppv_actor:
         try:
-            ppv = editor_level_lib.spawn_actor_from_class(
-                unreal.PostProcessVolume, unreal.Vector(0, 0, 0)
-            )
-            if ppv:
-                ppv.set_actor_label("EchoPPV")
-                # Infinite unbound volume — applies to the whole level
-                ppv.set_editor_property("unbound", True)
-
-                settings = ppv.get_editor_property("settings")
-                if settings:
-                    # Auto-exposure off, locked to very dark
-                    settings.set_editor_property("override_auto_exposure_method", True)
-                    settings.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_MANUAL)
-
-                    settings.set_editor_property("override_auto_exposure_bias", True)
-                    settings.set_editor_property("auto_exposure_bias", -2.0)
-
-                    # Bloom for emissive glow
-                    settings.set_editor_property("override_bloom_intensity", True)
-                    settings.set_editor_property("bloom_intensity", 1.5)
-
-                    settings.set_editor_property("override_bloom_threshold", True)
-                    settings.set_editor_property("bloom_threshold", 0.5)
-
-                    # Slight vignette for horror framing
-                    settings.set_editor_property("override_vignette_intensity", True)
-                    settings.set_editor_property("vignette_intensity", 0.6)
-
-                unreal.log("[EchoSetup] Created: EchoPPV (manual exposure -2, bloom 1.5, vignette 0.6)")
+            ppv_actor = actor_subsystem.spawn_actor_from_class(unreal.PostProcessVolume, unreal.Vector(0, 0, 0))
+            ppv_actor.set_actor_label("EchoPPV")
+            unreal.log("[EchoSetup] Created EchoPPV")
         except Exception as e:
-            unreal.log_warning(f"[EchoSetup] PostProcessVolume creation failed: {e}")
-            log_manual(
-                "Add PostProcessVolume (Infinite Unbound):\n"
-                "  Auto Exposure: Manual, Bias=-2\n"
-                "  Bloom: Intensity=1.5, Threshold=0.5\n"
-                "  Vignette: 0.6"
-            )
+            unreal.log_error(f"Failed to create PPV: {e}")
+
+    if ppv_actor:
+        ppv_actor.set_editor_property("unbound", True)
+        
+        # Load the Material
+        pp_mat = unreal.load_asset(Paths.M_ECHO_POST_PROCESS)
+        
+        # We will attempt to set the settings as a batch to bypass protected member errors
+        new_settings = {
+            "override_auto_exposure_method": True,
+            "auto_exposure_method": unreal.AutoExposureMethod.AEM_MANUAL,
+            "override_auto_exposure_bias": True,
+            "auto_exposure_bias": -2.0,
+            "override_bloom_intensity": True,
+            "bloom_intensity": 1.5,
+            "override_vignette_intensity": True,
+            "vignette_intensity": 0.6
+        }
+        
+        # Note: If blendables still fails, we'll log a manual instruction
+        if pp_mat:
+            try:
+                # Attempting to construct the blendables array
+                wb = unreal.WeightedBlendables(array=[unreal.WeightedBlendable(weight=1.0, object=pp_mat)])
+                new_settings["blendables"] = wb
+                unreal.log(f"[EchoSetup] Attempting to assign {Paths.M_ECHO_POST_PROCESS} via dictionary...")
+            except Exception as e:
+                unreal.log_warning(f"[EchoSetup] Could not prepare blendables dictionary: {e}")
+
+        try:
+            ppv_actor.set_editor_properties({"settings": new_settings})
+            unreal.log("[EchoSetup] Applied PostProcessSettings successfully")
+        except Exception as e:
+            unreal.log_warning(f"[EchoSetup] Failed to apply settings via dictionary: {e}")
+            log_manual(f"Select EchoPPV > Post Process Sections > Rendering Features > Post Process Materials > Array > Add {Paths.M_ECHO_POST_PROCESS}")
     else:
-        unreal.log("[EchoSetup] EchoPPV already exists, skipping")
+        unreal.log_warning("[EchoSetup] Could not find or create EchoPPV")
 
     # --- NavMeshBoundsVolume ---
     if not has_navmesh:
         try:
-            nav = editor_level_lib.spawn_actor_from_class(
+            nav = actor_subsystem.spawn_actor_from_class(
                 unreal.NavMeshBoundsVolume, unreal.Vector(0, 0, 150)
             )
             if nav:

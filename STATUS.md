@@ -1,8 +1,8 @@
 # Status: NeoNexusOne — Echo-Location
 
 ## Current Milestone
-**Milestone 2: "The Technical Foundation" — **COMPLETE**
-*Goal: Rebuild the technical foundation using an Unlit, shader-driven blueprint aesthetic.*
+**Milestone 2: "Universal Visuals & HUD"** — **IN PROGRESS**
+*Goal: Post-process edge detection for complex models, Hacker's View HUD, and modular level kit.*
 
 ---
 

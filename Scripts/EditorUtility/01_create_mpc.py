@@ -14,45 +14,48 @@ from helpers import Paths, MPCParams, asset_exists, ensure_directory, save_asset
 def run():
     path = Paths.MPC_GLOBAL_SOUND
 
-    if asset_exists(path):
-        log_exists("MPC_GlobalSound", path)
+    mpc = unreal.load_asset(path)
+    if not mpc:
+        ensure_directory(path)
+        factory = unreal.MaterialParameterCollectionFactoryNew()
+        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+        directory, asset_name = path.rsplit("/", 1)
+        mpc = asset_tools.create_asset(asset_name, directory, unreal.MaterialParameterCollection, factory)
+
+    if not mpc:
+        unreal.log_error("[EchoSetup] Failed to load/create MPC_GlobalSound")
         return
 
-    ensure_directory(path)
+    # Add parameters if they don't exist
+    vec_params = mpc.get_editor_property("vector_parameters")
+    scalar_params = mpc.get_editor_property("scalar_parameters")
 
-    # Create the MPC asset via AssetTools
-    factory = unreal.MaterialParameterCollectionFactoryNew()
-    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    def ensure_scalar(name, default=0.0):
+        if not any(p.get_editor_property("parameter_name") == name for p in scalar_params):
+            p = unreal.CollectionScalarParameter()
+            p.set_editor_property("parameter_name", name)
+            p.set_editor_property("default_value", default)
+            scalar_params.append(p)
+            unreal.log(f"[EchoSetup] Added scalar parameter: {name}")
 
-    # Extract directory and asset name from path
-    directory = path.rsplit("/", 1)[0]
-    asset_name = path.rsplit("/", 1)[1]
+    def ensure_vector(name, default=unreal.LinearColor()):
+        if not any(p.get_editor_property("parameter_name") == name for p in vec_params):
+            p = unreal.CollectionVectorParameter()
+            p.set_editor_property("parameter_name", name)
+            p.set_editor_property("default_value", default)
+            vec_params.append(p)
+            unreal.log(f"[EchoSetup] Added vector parameter: {name}")
 
-    mpc = asset_tools.create_asset(asset_name, directory, unreal.MaterialParameterCollection, factory)
+    ensure_vector(MPCParams.LAST_IMPACT_LOCATION)
+    ensure_scalar(MPCParams.CURRENT_RIPPLE_RADIUS)
+    ensure_scalar(MPCParams.RIPPLE_INTENSITY)
+    ensure_scalar(MPCParams.DIGITAL_JITTER_INTENSITY)
 
-    if mpc is None:
-        unreal.log_error("[EchoSetup] Failed to create MPC_GlobalSound")
-        return
-
-    # Add vector parameter: LastImpactLocation
-    vec_param = unreal.CollectionVectorParameter()
-    vec_param.set_editor_property("parameter_name", MPCParams.LAST_IMPACT_LOCATION)
-    vec_param.set_editor_property("default_value", unreal.LinearColor(0.0, 0.0, 0.0, 0.0))
-    mpc.get_editor_property("vector_parameters").append(vec_param)
-
-    # Add scalar parameters
-    radius_param = unreal.CollectionScalarParameter()
-    radius_param.set_editor_property("parameter_name", MPCParams.CURRENT_RIPPLE_RADIUS)
-    radius_param.set_editor_property("default_value", 0.0)
-    mpc.get_editor_property("scalar_parameters").append(radius_param)
-
-    intensity_param = unreal.CollectionScalarParameter()
-    intensity_param.set_editor_property("parameter_name", MPCParams.RIPPLE_INTENSITY)
-    intensity_param.set_editor_property("default_value", 0.0)
-    mpc.get_editor_property("scalar_parameters").append(intensity_param)
+    mpc.set_editor_property("vector_parameters", vec_params)
+    mpc.set_editor_property("scalar_parameters", scalar_params)
 
     save_asset(path)
-    log_created("MPC_GlobalSound", path)
+    log_created("MPC_GlobalSound (Updated)", path)
 
 
 if __name__ == "__main__":
