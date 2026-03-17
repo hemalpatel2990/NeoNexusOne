@@ -8,7 +8,7 @@ Parameters (matching EchoMPCParams in EchoTypes.h):
 """
 
 import unreal
-from helpers import Paths, MPCParams, asset_exists, ensure_directory, save_asset, log_created, log_exists
+from helpers import Paths, MPCParams, asset_exists, ensure_directory, save_asset, log_created
 
 
 def run():
@@ -47,9 +47,10 @@ def run():
             unreal.log(f"[EchoSetup] Added vector parameter: {name}")
 
     ensure_vector(MPCParams.LAST_IMPACT_LOCATION)
+    ensure_vector(MPCParams.PLAYER_WORLD_POSITION)
     ensure_scalar(MPCParams.CURRENT_RIPPLE_RADIUS)
     ensure_scalar(MPCParams.RIPPLE_INTENSITY)
-    ensure_scalar(MPCParams.DIGITAL_JITTER_INTENSITY)
+    ensure_scalar(MPCParams.RIPPLE_START_TIME)
 
     mpc.set_editor_property("vector_parameters", vec_params)
     mpc.set_editor_property("scalar_parameters", scalar_params)
