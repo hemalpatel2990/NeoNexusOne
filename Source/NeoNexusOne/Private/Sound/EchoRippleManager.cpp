@@ -4,6 +4,7 @@
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Curves/CurveFloat.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogEchoRipple, Log, All);
 
@@ -81,6 +82,11 @@ void UEchoRippleManager::TriggerRipple(const FEchoRippleEvent& Event)
 	// Set the impact location immediately so the material knows where to center the ring
 	UpdateMPC(Event.ImpactLocation, 0.0f, Event.Intensity);
 
+	// Record the real-time timestamp of this ripple for temporal afterglow decay in the shader
+	UKismetMaterialLibrary::SetScalarParameterValue(
+		GetWorld(), EchoMPC, EchoMPCParams::RippleStartTime,
+		UGameplayStatics::GetRealTimeSeconds(this));
+
 	// Use play rate to map normalized 0→1 timeline to the desired duration
 	RippleTimeline.SetPlayRate(1.0f / FMath::Max(RippleDuration, KINDA_SMALL_NUMBER));
 	RippleTimeline.PlayFromStart();
@@ -136,9 +142,6 @@ void UEchoRippleManager::UpdateMPC(const FVector& Location, float Radius, float 
 
 	UKismetMaterialLibrary::SetScalarParameterValue(
 		World, EchoMPC, EchoMPCParams::RippleIntensity, Intensity);
-
-	UKismetMaterialLibrary::SetScalarParameterValue(
-		World, EchoMPC, EchoMPCParams::DigitalJitterIntensity, Intensity);
 }
 
 void UEchoRippleManager::ResetMPC()

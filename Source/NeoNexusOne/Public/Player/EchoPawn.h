@@ -14,6 +14,7 @@ class UCameraComponent;
 class UEchoMovementComponent;
 class UEchoFeedbackComponent;
 class UPawnNoiseEmitterComponent;
+class UMaterialParameterCollection;
 class UInputAction;
 struct FInputActionValue;
 
@@ -30,6 +31,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 	// --- Components ---
 
@@ -53,6 +55,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Echo|Components")
 	TObjectPtr<UPawnNoiseEmitterComponent> NoiseEmitter;
+
+	/** MPC reference for writing player position each tick. Set in Blueprint to MPC_GlobalSound. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Echo|Ripple")
+	TObjectPtr<UMaterialParameterCollection> EchoMPC;
 
 	// --- Input Actions (set in Blueprint to IA_ assets) ---
 

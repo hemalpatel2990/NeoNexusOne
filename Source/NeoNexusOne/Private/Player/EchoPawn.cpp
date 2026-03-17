@@ -12,11 +12,15 @@
 #include "Feedback/EchoFeedbackComponent.h"
 #include "Core/EchoGameMode.h"
 #include "Sound/EchoRippleManager.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogEchoPawn, Log, All);
 
 AEchoPawn::AEchoPawn()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	// Box collision as root — 50cm half-extent cube
 	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
 	BoxCollision->InitBoxExtent(FVector(50.0f));
@@ -56,6 +60,23 @@ void AEchoPawn::BeginPlay()
 	if (MovementComponent)
 	{
 		MovementComponent->OnEchoImpact.AddDynamic(this, &AEchoPawn::OnImpact);
+	}
+}
+
+void AEchoPawn::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Write player world position to MPC every frame for proximity awareness shader
+	if (EchoMPC)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			const FVector Loc = GetActorLocation();
+			UKismetMaterialLibrary::SetVectorParameterValue(
+				World, EchoMPC, EchoMPCParams::PlayerWorldPosition,
+				FLinearColor(Loc.X, Loc.Y, Loc.Z, 0.0f));
+		}
 	}
 }
 
