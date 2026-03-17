@@ -10,6 +10,7 @@ Parameters (matching EchoMPCParams in EchoTypes.h):
 import unreal
 import os
 import sys
+import importlib
 
 try:
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +20,8 @@ except NameError:
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+import helpers
+importlib.reload(helpers)
 from helpers import Paths, MPCParams, asset_exists, ensure_directory, save_asset, log_created
 
 

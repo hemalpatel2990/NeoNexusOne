@@ -18,6 +18,9 @@ except NameError:
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+import helpers
+import importlib
+importlib.reload(helpers)
 from helpers import Paths, MPCParams
 
 
