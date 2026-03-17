@@ -97,5 +97,6 @@ namespace EchoMPCParams
 	inline const FName LastImpactLocation = FName(TEXT("LastImpactLocation"));
 	inline const FName CurrentRippleRadius = FName(TEXT("CurrentRippleRadius"));
 	inline const FName RippleIntensity = FName(TEXT("RippleIntensity"));
-	inline const FName DigitalJitterIntensity = FName(TEXT("DigitalJitterIntensity"));
+	inline const FName PlayerWorldPosition = FName(TEXT("PlayerWorldPosition"));
+	inline const FName RippleStartTime = FName(TEXT("RippleStartTime"));
 }
