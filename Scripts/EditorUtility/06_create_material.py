@@ -11,18 +11,22 @@ from helpers import Paths, BASE, asset_exists, ensure_directory, save_asset
 
 
 def run():
-    # World: WorldSpace, Masked by Sonar, Cyan
+    # World: WorldSpace, Masked by Sonar, Vibrant Blue
     _setup_instance(Paths.MI_ECHO_MASTER, "MI_EchoMaster",
                     is_actor=False, is_player=False, use_flux=True,
-                    echo_color=unreal.LinearColor(0.0, 500.0, 500.0, 1.0))
-    # Enemy: LocalSpace, Masked by Sonar, Red
+                    echo_color=unreal.LinearColor(0.0, 200.0, 800.0, 1.0))
+    # Obstacle: WorldSpace, Masked by Sonar, Vivid Purple
+    _setup_instance(Paths.MI_ECHO_OBSTACLE, "MI_EchoObstacle",
+                    is_actor=False, is_player=False, use_flux=True,
+                    echo_color=unreal.LinearColor(400.0, 0.0, 800.0, 1.0))
+    # Enemy: LocalSpace, Masked by Sonar, Hot Red
     _setup_instance(Paths.MI_ECHO_ENEMY, "MI_EchoEnemy",
                     is_actor=True, is_player=False, use_flux=True,
-                    echo_color=unreal.LinearColor(500.0, 50.0, 0.0, 1.0))
-    # Player: LocalSpace, Always Visible, Cyan
+                    echo_color=unreal.LinearColor(800.0, 50.0, 0.0, 1.0))
+    # Player: LocalSpace, Always Visible, Bright Green
     _setup_instance(Paths.MI_ECHO_PLAYER, "MI_EchoPlayer",
                     is_actor=True, is_player=True, use_flux=True,
-                    echo_color=unreal.LinearColor(0.0, 500.0, 500.0, 1.0))
+                    echo_color=unreal.LinearColor(0.0, 800.0, 100.0, 1.0))
 
 
 def _setup_instance(path, name, is_actor=False, is_player=False, use_flux=False, echo_color=None):

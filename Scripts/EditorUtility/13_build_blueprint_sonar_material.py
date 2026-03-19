@@ -1,9 +1,9 @@
 """
-13_build_blueprint_sonar_material.py — Living Contour Map Material Rebuild.
+13_build_blueprint_sonar_material.py — Ink & Sonar Material Rebuild.
 
 Builds M_EchoMaster with two visual modes:
   - Blueprint Sonar (UseFluxLook=False): Grid + geometric edges
-  - Living Contour Map (UseFluxLook=True): Contour lines + edges + afterglow decay + proximity glow
+  - Ink & Sonar (UseFluxLook=True): Cel-bands + halftone dots + ink outlines + afterglow + proximity
 """
 
 import unreal
@@ -43,12 +43,12 @@ def run():
     # 1. PARAMETERS
     # =========================================================================
 
-    # EchoColor — per-instance HDR color (replaces hardcoded cyan)
+    # EchoColor — per-instance HDR color
     echo_color = mel.create_material_expression(material, unreal.MaterialExpressionVectorParameter, 0, 800)
     echo_color.set_editor_property("parameter_name", "EchoColor")
     echo_color.set_editor_property("default_value", unreal.LinearColor(0.0, 500.0, 500.0, 1.0))
 
-    # Tunable scalar parameters for contour map mode
+    # Tunable scalar parameters for reveal systems (shared)
     sonar_decay_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 1600)
     sonar_decay_param.set_editor_property("parameter_name", "SonarDecaySeconds")
     sonar_decay_param.set_editor_property("default_value", 5.0)
@@ -57,13 +57,11 @@ def run():
     proximity_radius_param.set_editor_property("parameter_name", "ProximityRadius")
     proximity_radius_param.set_editor_property("default_value", 400.0)
 
-    contour_scale_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 1800)
-    contour_scale_param.set_editor_property("parameter_name", "ContourScale")
-    contour_scale_param.set_editor_property("default_value", 0.05)
+    # Tunable scalar parameters for Ink & Sonar mode
+    num_bands_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 1800)
+    num_bands_param.set_editor_property("parameter_name", "NumBands")
+    num_bands_param.set_editor_property("default_value", 3.0)
 
-    contour_speed_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 1900)
-    contour_speed_param.set_editor_property("parameter_name", "ContourFlowSpeed")
-    contour_speed_param.set_editor_property("default_value", 0.5)
 
     # =========================================================================
     # 2. COORDINATES (LocalPosition for Actors, WorldPosition for World)
@@ -150,25 +148,52 @@ return 1.0 - saturate(val / Thickness);
     mel.connect_material_expressions(grid_sz, "", grid_node, "GridSize")
     mel.connect_material_expressions(grid_th, "", grid_node, "Thickness")
 
-    # 4b. Geometric Edges HLSL (fwidth(Normal) with distance normalization)
+    # 4b. Bold Outlines HLSL (UV-edge + normal discontinuity + Fresnel silhouette)
+    # Cubes have UVs 0→1 per face, so proximity to UV edge = face border
     edge_code = """
 float3 N = normalize(Parameters.WorldNormal);
-float Edge = length(fwidth(N));
 float3 CameraPos = LWCToFloat(ResolvedView.WorldCameraOrigin);
 float3 WorldPos = LWCToFloat(GetWorldPosition(Parameters));
-return saturate(Edge * (Sensitivity / (length(WorldPos - CameraPos) * 0.001 + 1.0)));
+float CamDist = length(WorldPos - CameraPos);
+
+// 1. UV-based edge: distance from UV border (works on standard cube UVs)
+float2 edgeDist = min(UV, 1.0 - UV);
+float uvEdge = 1.0 - smoothstep(0.0, BorderWidth, min(edgeDist.x, edgeDist.y));
+
+// 2. Normal discontinuity: catches hard edges on any geometry
+float GeomEdge = length(fwidth(N));
+float GeomMask = saturate(GeomEdge * (Sensitivity / (CamDist * 0.001 + 1.0)));
+
+// 3. Fresnel silhouette: thin rim where surface grazes the camera
+float3 ViewDir = normalize(CameraPos - WorldPos);
+float NdotV = abs(dot(N, ViewDir));
+float SilEdge = 1.0 - smoothstep(0.02, 0.12, NdotV);
+
+return saturate(max(uvEdge, max(GeomMask, SilEdge)));
 """
     edge_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -1000, 1000)
     edge_node.set_editor_property("code", edge_code)
     edge_node.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
     input_sens = unreal.CustomInput()
     input_sens.set_editor_property("input_name", "Sensitivity")
-    edge_node.set_editor_property("inputs", [input_sens])
+    input_bw = unreal.CustomInput()
+    input_bw.set_editor_property("input_name", "BorderWidth")
+    input_uv = unreal.CustomInput()
+    input_uv.set_editor_property("input_name", "UV")
+    edge_node.set_editor_property("inputs", [input_sens, input_bw, input_uv])
 
     edge_sns = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 1050)
     edge_sns.set_editor_property("parameter_name", "EdgeSensitivity")
-    edge_sns.set_editor_property("default_value", 20.0)
+    edge_sns.set_editor_property("default_value", 200.0)
     mel.connect_material_expressions(edge_sns, "", edge_node, "Sensitivity")
+
+    border_width_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 1150)
+    border_width_param.set_editor_property("parameter_name", "BorderWidth")
+    border_width_param.set_editor_property("default_value", 0.06)
+    mel.connect_material_expressions(border_width_param, "", edge_node, "BorderWidth")
+
+    texcoord_node = mel.create_material_expression(material, unreal.MaterialExpressionTextureCoordinate, -1200, 1250)
+    mel.connect_material_expressions(texcoord_node, "", edge_node, "UV")
 
     # Blueprint path combine: max(grid, edges)
     blueprint_path = mel.create_material_expression(material, unreal.MaterialExpressionMax, -600, 800)
@@ -176,45 +201,61 @@ return saturate(Edge * (Sensitivity / (length(WorldPos - CameraPos) * 0.001 + 1.
     mel.connect_material_expressions(edge_node, "", blueprint_path, "B")
 
     # =========================================================================
-    # 5. CONTOUR MAP PATH: Contour Lines + Edges + Afterglow + Proximity
+    # 5. INK & SONAR PATH: Cel-Bands + Halftone + Ink + Afterglow + Proximity
     # =========================================================================
 
-    # 5a. Animated Contour Lines HLSL
-    contour_code = """
-float3 WorldPos = LWCToFloat(GetWorldPosition(Parameters));
-float Time = ResolvedView.RealTime;
-float phase = frac((WorldPos.z * ContourScale) + (Time * FlowSpeed));
-float band = smoothstep(0.42, 0.48, phase) - smoothstep(0.52, 0.58, phase);
-return band;
-"""
-    contour_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -1000, 1500)
-    contour_node.set_editor_property("code", contour_code)
-    contour_node.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
-    input_cs = unreal.CustomInput()
-    input_cs.set_editor_property("input_name", "ContourScale")
-    input_cf = unreal.CustomInput()
-    input_cf.set_editor_property("input_name", "FlowSpeed")
-    contour_node.set_editor_property("inputs", [input_cs, input_cf])
-    mel.connect_material_expressions(contour_scale_param, "", contour_node, "ContourScale")
-    mel.connect_material_expressions(contour_speed_param, "", contour_node, "FlowSpeed")
+    # 5-pre. Player position from MPC (needed by proximity and cel-bands)
+    player_pos = mel.create_material_expression(material, unreal.MaterialExpressionCollectionParameter, -1500, 2000)
+    player_pos.set_editor_property("collection", mpc)
+    player_pos.set_editor_property("parameter_name", unreal.Name(MPCParams.PLAYER_WORLD_POSITION))
 
-    # Contour map visual: max(edges, contour_lines)
-    contour_path = mel.create_material_expression(material, unreal.MaterialExpressionMax, -600, 1500)
-    mel.connect_material_expressions(edge_node, "", contour_path, "A")
-    mel.connect_material_expressions(contour_node, "", contour_path, "B")
+    player_pos_rgb = mel.create_material_expression(material, unreal.MaterialExpressionComponentMask, -1300, 2000)
+    player_pos_rgb.set_editor_property("r", True)
+    player_pos_rgb.set_editor_property("g", True)
+    player_pos_rgb.set_editor_property("b", True)
+    mel.connect_material_expressions(player_pos, "", player_pos_rgb, "")
 
-    # 5b. Sonar Afterglow Decay HLSL (temporal noise dissolve behind ring)
+    # 5a-pre. MPC and params needed by both cel-bands and afterglow
     ripple_start = mel.create_material_expression(material, unreal.MaterialExpressionCollectionParameter, -1500, 1800)
     ripple_start.set_editor_property("collection", mpc)
     ripple_start.set_editor_property("parameter_name", unreal.Name(MPCParams.RIPPLE_START_TIME))
 
-    max_radius_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 2000)
+    max_radius_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 2300)
     max_radius_param.set_editor_property("parameter_name", "MaxRippleRadius")
     max_radius_param.set_editor_property("default_value", 2000.0)
 
-    ripple_duration_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 2100)
+    ripple_duration_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 2400)
     ripple_duration_param.set_editor_property("parameter_name", "RippleDuration")
     ripple_duration_param.set_editor_property("default_value", 1.5)
+
+    # 5a. Cel-Shading Bands HLSL (distance-to-impact quantized into discrete brightness steps)
+    cel_bands_code = """
+float3 WorldPos = LWCToFloat(GetWorldPosition(Parameters));
+float DistToImpact = length(WorldPos - ImpactLoc);
+if (StartTime <= 0.0) return 0.5;
+float NB = max(NumBands, 1.0);
+float DistRatio = saturate(DistToImpact / max(MaxRadius, 1.0));
+float BandIndex = min(floor(DistRatio * NB), NB - 1.0);
+return 1.0 - BandIndex / NB;
+"""
+    cel_bands_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -1000, 1500)
+    cel_bands_node.set_editor_property("code", cel_bands_code)
+    cel_bands_node.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    input_cb_il = unreal.CustomInput()
+    input_cb_il.set_editor_property("input_name", "ImpactLoc")
+    input_cb_mr = unreal.CustomInput()
+    input_cb_mr.set_editor_property("input_name", "MaxRadius")
+    input_cb_nb = unreal.CustomInput()
+    input_cb_nb.set_editor_property("input_name", "NumBands")
+    input_cb_st = unreal.CustomInput()
+    input_cb_st.set_editor_property("input_name", "StartTime")
+    cel_bands_node.set_editor_property("inputs", [input_cb_il, input_cb_mr, input_cb_nb, input_cb_st])
+    mel.connect_material_expressions(mask_rgb, "", cel_bands_node, "ImpactLoc")
+    mel.connect_material_expressions(max_radius_param, "", cel_bands_node, "MaxRadius")
+    mel.connect_material_expressions(num_bands_param, "", cel_bands_node, "NumBands")
+    mel.connect_material_expressions(ripple_start, "", cel_bands_node, "StartTime")
+
+    # 5b. Sonar Afterglow Decay HLSL (temporal noise dissolve behind ring)
 
     afterglow_code = """
 float3 WorldPos = LWCToFloat(GetWorldPosition(Parameters));
@@ -235,10 +276,9 @@ if (Now < TimeRingReached) return 0.0;
 float TimeSinceRing = Now - TimeRingReached;
 float DecayProgress = saturate(TimeSinceRing / max(DecaySeconds, 0.001));
 
-// Noise dissolve: pixel goes dark when noise < decay progress
-float Noise = frac(sin(dot(floor(WorldPos * 0.05), float3(12.9898, 78.233, 45.164))) * 43758.5453);
-float AfterglowMask = step(DecayProgress, Noise);
-return AfterglowMask;
+// Smooth fade: starts bright, dims gradually with a slight ease-out curve
+float Fade = 1.0 - DecayProgress;
+return Fade * Fade;
 """
     afterglow_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -1000, 1800)
     afterglow_node.set_editor_property("code", afterglow_code)
@@ -261,16 +301,6 @@ return AfterglowMask;
     mel.connect_material_expressions(ripple_start, "", afterglow_node, "StartTime")
 
     # 5c. Proximity Awareness HLSL
-    player_pos = mel.create_material_expression(material, unreal.MaterialExpressionCollectionParameter, -1500, 2000)
-    player_pos.set_editor_property("collection", mpc)
-    player_pos.set_editor_property("parameter_name", unreal.Name(MPCParams.PLAYER_WORLD_POSITION))
-
-    player_pos_rgb = mel.create_material_expression(material, unreal.MaterialExpressionComponentMask, -1300, 2000)
-    player_pos_rgb.set_editor_property("r", True)
-    player_pos_rgb.set_editor_property("g", True)
-    player_pos_rgb.set_editor_property("b", True)
-    mel.connect_material_expressions(player_pos, "", player_pos_rgb, "")
-
     proximity_code = """
 float3 WorldPos = LWCToFloat(GetWorldPosition(Parameters));
 float Dist = length(WorldPos - PlayerPos);
@@ -289,15 +319,147 @@ return lerp(0.2, 0.6, Glow) * InRadius;
     mel.connect_material_expressions(player_pos_rgb, "", proximity_node, "PlayerPos")
     mel.connect_material_expressions(proximity_radius_param, "", proximity_node, "Radius")
 
-    # 5d. Combine: reveal_mask = max(afterglow, proximity)
+    # 5c-ii. Proximity Cel-Bands (player-distance banding for proximity zone)
+    prox_bands_code = """
+float3 WorldPos = LWCToFloat(GetWorldPosition(Parameters));
+float DistToPlayer = length(WorldPos - PlayerPos);
+float NB = max(NumBands, 1.0);
+float ProxRatio = saturate(DistToPlayer / max(Radius, 1.0));
+float BandIdx = min(floor(ProxRatio * NB), NB - 1.0);
+return 1.0 - BandIdx / NB;
+"""
+    prox_bands_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -1000, 2150)
+    prox_bands_node.set_editor_property("code", prox_bands_code)
+    prox_bands_node.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    input_pb_pp = unreal.CustomInput()
+    input_pb_pp.set_editor_property("input_name", "PlayerPos")
+    input_pb_r = unreal.CustomInput()
+    input_pb_r.set_editor_property("input_name", "Radius")
+    input_pb_nb = unreal.CustomInput()
+    input_pb_nb.set_editor_property("input_name", "NumBands")
+    prox_bands_node.set_editor_property("inputs", [input_pb_pp, input_pb_r, input_pb_nb])
+    mel.connect_material_expressions(player_pos_rgb, "", prox_bands_node, "PlayerPos")
+    mel.connect_material_expressions(proximity_radius_param, "", prox_bands_node, "Radius")
+    mel.connect_material_expressions(num_bands_param, "", prox_bands_node, "NumBands")
+
+    # 5d. Sonar Ring Edge — bright expanding wavefront from MPC CurrentRippleRadius
+    ring_edge_code = """
+float3 WorldPos = LWCToFloat(GetWorldPosition(Parameters));
+float DistToImpact = length(WorldPos - ImpactLoc);
+// Ring is a thin band at the current radius edge
+float RingWidth = 80.0;
+float Inner = CurRadius - RingWidth;
+float RingMask = smoothstep(Inner, Inner + RingWidth * 0.3, DistToImpact)
+              * (1.0 - smoothstep(CurRadius - RingWidth * 0.3, CurRadius, DistToImpact));
+return RingMask * Intensity;
+"""
+    ring_edge_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -1000, 2350)
+    ring_edge_node.set_editor_property("code", ring_edge_code)
+    ring_edge_node.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    input_re_il = unreal.CustomInput()
+    input_re_il.set_editor_property("input_name", "ImpactLoc")
+    input_re_cr = unreal.CustomInput()
+    input_re_cr.set_editor_property("input_name", "CurRadius")
+    input_re_in = unreal.CustomInput()
+    input_re_in.set_editor_property("input_name", "Intensity")
+    ring_edge_node.set_editor_property("inputs", [input_re_il, input_re_cr, input_re_in])
+    mel.connect_material_expressions(mask_rgb, "", ring_edge_node, "ImpactLoc")
+    mel.connect_material_expressions(rad, "", ring_edge_node, "CurRadius")
+    mel.connect_material_expressions(inten, "", ring_edge_node, "Intensity")
+
+    # 5d-ii. Halftone Dots — small dots, denser further from impact
+    # Near sonar = clean/sparse, far = dense shading dots
+    halftone_code = """
+float3 N = abs(normalize(Parameters.WorldNormal));
+N = N / (N.x + N.y + N.z + 0.001);
+float2 uvXY = Position.xy * DotScale;
+float2 uvXZ = Position.xz * DotScale;
+float2 uvYZ = Position.yz * DotScale;
+float dotXY = length(frac(uvXY) - 0.5);
+float dotXZ = length(frac(uvXZ) - 0.5);
+float dotYZ = length(frac(uvYZ) - 0.5);
+float dotBlend = dotXY * N.z + dotXZ * N.y + dotYZ * N.x;
+// Invert CelBandValue: bright band (near) = high threshold = few dots, dark band (far) = low threshold = many dots
+float threshold = lerp(0.1, 0.4, CelBandValue);
+float halftone = smoothstep(threshold - 0.02, threshold + 0.02, dotBlend);
+return lerp(1.0, 1.0 - DotStrength, 1.0 - halftone);
+"""
+    halftone_node = mel.create_material_expression(material, unreal.MaterialExpressionCustom, -1000, 2450)
+    halftone_node.set_editor_property("code", halftone_code)
+    halftone_node.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    input_ht_pos = unreal.CustomInput()
+    input_ht_pos.set_editor_property("input_name", "Position")
+    input_ht_ds = unreal.CustomInput()
+    input_ht_ds.set_editor_property("input_name", "DotScale")
+    input_ht_cb = unreal.CustomInput()
+    input_ht_cb.set_editor_property("input_name", "CelBandValue")
+    input_ht_str = unreal.CustomInput()
+    input_ht_str.set_editor_property("input_name", "DotStrength")
+    halftone_node.set_editor_property("inputs", [input_ht_pos, input_ht_ds, input_ht_cb, input_ht_str])
+
+    dot_scale_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 2450)
+    dot_scale_param.set_editor_property("parameter_name", "DotScale")
+    dot_scale_param.set_editor_property("default_value", 0.05)
+
+    dot_strength_param = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -1200, 2550)
+    dot_strength_param.set_editor_property("parameter_name", "DotStrength")
+    dot_strength_param.set_editor_property("default_value", 0.25)
+
+    mel.connect_material_expressions(grid_coords_sw, "", halftone_node, "Position")
+    mel.connect_material_expressions(dot_scale_param, "", halftone_node, "DotScale")
+    mel.connect_material_expressions(dot_strength_param, "", halftone_node, "DotStrength")
+    # CelBandValue connected below after cel_bands_combined
+
+    # =========================================================================
+    # 5e. INK & SONAR COMPOSITING
+    # =========================================================================
+
+    # reveal_mask = max(ring_edge, afterglow, proximity)
+    ring_or_afterglow = mel.create_material_expression(material, unreal.MaterialExpressionMax, -400, 2100)
+    mel.connect_material_expressions(ring_edge_node, "", ring_or_afterglow, "A")
+    mel.connect_material_expressions(afterglow_node, "", ring_or_afterglow, "B")
+
     contour_reveal = mel.create_material_expression(material, unreal.MaterialExpressionMax, -400, 1900)
-    mel.connect_material_expressions(afterglow_node, "", contour_reveal, "A")
+    mel.connect_material_expressions(ring_or_afterglow, "", contour_reveal, "A")
     mel.connect_material_expressions(proximity_node, "", contour_reveal, "B")
 
-    # Contour map masked: contour_visual * reveal_mask
-    contour_masked = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, -200, 1600)
-    mel.connect_material_expressions(contour_path, "", contour_masked, "A")
-    mel.connect_material_expressions(contour_reveal, "", contour_masked, "B")
+    # Combined cel-bands: max(sonar_bands, proximity_bands)
+    cel_bands_combined = mel.create_material_expression(material, unreal.MaterialExpressionMax, -600, 1600)
+    mel.connect_material_expressions(cel_bands_node, "", cel_bands_combined, "A")
+    mel.connect_material_expressions(prox_bands_node, "", cel_bands_combined, "B")
+
+    # Connect CelBandValue to halftone (deferred from above)
+    mel.connect_material_expressions(cel_bands_combined, "", halftone_node, "CelBandValue")
+
+    # Ink mask inversion: (1.0 - edge_node) — dark outlines where edges are detected
+    one_const = mel.create_material_expression(material, unreal.MaterialExpressionConstant, -600, 1000)
+    one_const.set_editor_property("r", 1.0)
+    ink_invert = mel.create_material_expression(material, unreal.MaterialExpressionSubtract, -400, 1000)
+    mel.connect_material_expressions(one_const, "", ink_invert, "A")
+    mel.connect_material_expressions(edge_node, "", ink_invert, "B")
+
+    # --- World Ink & Sonar path: cel_bands * halftone * (1 - ink) * reveal_mask ---
+
+    # cel_bands * halftone
+    world_cel_ht = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, -300, 1600)
+    mel.connect_material_expressions(cel_bands_combined, "", world_cel_ht, "A")
+    mel.connect_material_expressions(halftone_node, "", world_cel_ht, "B")
+
+    # * (1 - ink)
+    world_cel_ink = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, -200, 1600)
+    mel.connect_material_expressions(world_cel_ht, "", world_cel_ink, "A")
+    mel.connect_material_expressions(ink_invert, "", world_cel_ink, "B")
+
+    # * reveal_mask
+    ink_sonar_masked = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, 0, 1600)
+    mel.connect_material_expressions(world_cel_ink, "", ink_sonar_masked, "A")
+    mel.connect_material_expressions(contour_reveal, "", ink_sonar_masked, "B")
+
+    # --- Player Ink & Sonar path: 1.0 * (1 - ink) — flat bright with outlines ---
+    # Player uses UV edges for outlines, which work well on cube faces
+    player_ink_path = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, -200, 2500)
+    mel.connect_material_expressions(one_const, "", player_ink_path, "A")
+    mel.connect_material_expressions(ink_invert, "", player_ink_path, "B")
 
     # =========================================================================
     # 6. FINAL COMBINE (UseFluxLook switch + IsPlayer bypass + EchoColor)
@@ -305,7 +467,7 @@ return lerp(0.2, 0.6, Glow) * InRadius;
 
     # --- World geometry path (IsPlayer=False): visual * reveal mask ---
 
-    # Blueprint mode world: grid+edges * sonar ring mask
+    # Blueprint mode world: grid+edges * sonar ring mask (unchanged)
     world_masked_bp = mel.create_material_expression(material, unreal.MaterialExpressionMultiply, -400, 800)
     mel.connect_material_expressions(blueprint_path, "", world_masked_bp, "A")
     mel.connect_material_expressions(final_sonar, "", world_masked_bp, "B")
@@ -314,18 +476,18 @@ return lerp(0.2, 0.6, Glow) * InRadius;
     world_mode_sw = mel.create_material_expression(material, unreal.MaterialExpressionStaticSwitchParameter, -200, 800)
     world_mode_sw.set_editor_property("parameter_name", "UseFluxLook")
     world_mode_sw.set_editor_property("default_value", False)
-    mel.connect_material_expressions(contour_masked, "", world_mode_sw, "True")
+    mel.connect_material_expressions(ink_sonar_masked, "", world_mode_sw, "True")
     mel.connect_material_expressions(world_masked_bp, "", world_mode_sw, "False")
 
-    # --- Player path (IsPlayer=True): unmasked visual pattern, always visible ---
+    # --- Player path (IsPlayer=True) ---
 
-    # UseFluxLook switch for player visual (no sonar/proximity masking)
+    # UseFluxLook switch for player visual
     player_visual_sw = mel.create_material_expression(material, unreal.MaterialExpressionStaticSwitchParameter, -200, 500)
     player_visual_sw.set_editor_property("parameter_name", "UseFluxLook")
-    mel.connect_material_expressions(contour_path, "", player_visual_sw, "True")
+    mel.connect_material_expressions(player_ink_path, "", player_visual_sw, "True")
     mel.connect_material_expressions(blueprint_path, "", player_visual_sw, "False")
 
-    # IsPlayer bypass: True = unmasked visual, False = world masked visual
+    # IsPlayer bypass: True = player visual, False = world masked visual
     visible_sw = mel.create_material_expression(material, unreal.MaterialExpressionStaticSwitchParameter, 0, 600)
     visible_sw.set_editor_property("parameter_name", "IsPlayer")
     mel.connect_material_expressions(player_visual_sw, "", visible_sw, "True")
@@ -340,7 +502,7 @@ return lerp(0.2, 0.6, Glow) * InRadius;
 
     mel.recompile_material(material)
     eal.save_asset(asset_path)
-    unreal.log("SUCCESS: Rebuilt M_EchoMaster with Living Contour Map mode.")
+    unreal.log("SUCCESS: Rebuilt M_EchoMaster with Ink & Sonar mode.")
 
 
 if __name__ == "__main__":

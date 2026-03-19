@@ -12,6 +12,7 @@ class Paths:
     MI_ECHO_MASTER       = f"{BASE}/Materials/MI_EchoMaster"
     MI_ECHO_PLAYER       = f"{BASE}/Materials/MI_EchoPlayer"
     MI_ECHO_ENEMY        = f"{BASE}/Materials/MI_EchoEnemy"
+    MI_ECHO_OBSTACLE     = f"{BASE}/Materials/MI_EchoObstacle"
     PAWN_BP              = f"{BASE}/Player/BP_EchoPawn"
     L_ECHO_PROTOTYPE     = f"{BASE}/Maps/L_EchoPrototype"
 
