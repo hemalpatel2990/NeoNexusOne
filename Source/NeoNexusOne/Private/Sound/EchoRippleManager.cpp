@@ -112,7 +112,16 @@ void UEchoRippleManager::OnRippleTimelineFinished()
 	CachedRadius = 0.0f;
 	CachedIntensity = 0.0f;
 	SetComponentTickEnabled(false);
-	ResetMPC();
+
+	// Only zero out radius and intensity — keep LastImpactLocation and RippleStartTime
+	// intact so the shader afterglow can continue its temporal decay after the ring finishes
+	if (EchoMPC && GetWorld())
+	{
+		UKismetMaterialLibrary::SetScalarParameterValue(
+			GetWorld(), EchoMPC, EchoMPCParams::CurrentRippleRadius, 0.0f);
+		UKismetMaterialLibrary::SetScalarParameterValue(
+			GetWorld(), EchoMPC, EchoMPCParams::RippleIntensity, 0.0f);
+	}
 }
 
 void UEchoRippleManager::UpdateMPC(const FVector& Location, float Radius, float Intensity)
@@ -146,5 +155,7 @@ void UEchoRippleManager::UpdateMPC(const FVector& Location, float Radius, float 
 
 void UEchoRippleManager::ResetMPC()
 {
+	// Zero radius and intensity. Keep location at zero (no impact has occurred yet).
+	// RippleStartTime stays at 0.0 so the shader's "if (StartTime <= 0) return 0" guard works.
 	UpdateMPC(FVector::ZeroVector, 0.0f, 0.0f);
 }

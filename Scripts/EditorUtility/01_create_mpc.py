@@ -26,51 +26,61 @@ from helpers import Paths, MPCParams, asset_exists, ensure_directory, save_asset
 
 
 def run():
+    eal = unreal.EditorAssetLibrary
     path = Paths.MPC_GLOBAL_SOUND
 
-    mpc = unreal.load_asset(path)
-    if not mpc:
-        ensure_directory(path)
-        factory = unreal.MaterialParameterCollectionFactoryNew()
-        asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-        directory, asset_name = path.rsplit("/", 1)
-        mpc = asset_tools.create_asset(asset_name, directory, unreal.MaterialParameterCollection, factory)
+    # Delete material instances and parent material FIRST to prevent render-thread
+    # crash when MPC layout changes while compiled shaders still reference old layout.
+    dependents = [Paths.MI_ECHO_MASTER, Paths.MI_ECHO_ENEMY, Paths.MI_ECHO_PLAYER, Paths.M_ECHO_MASTER]
+    for dep in dependents:
+        if eal.does_asset_exist(dep):
+            eal.delete_asset(dep)
+            unreal.log(f"[EchoSetup] Deleted {dep} (will be rebuilt by scripts 13/06)")
+
+    # Delete and recreate the MPC from scratch for a clean layout
+    if eal.does_asset_exist(path):
+        eal.delete_asset(path)
+        unreal.log("[EchoSetup] Deleted old MPC_GlobalSound")
+
+    ensure_directory(path)
+    factory = unreal.MaterialParameterCollectionFactoryNew()
+    asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+    directory, asset_name = path.rsplit("/", 1)
+    mpc = asset_tools.create_asset(asset_name, directory, unreal.MaterialParameterCollection, factory)
 
     if not mpc:
-        unreal.log_error("[EchoSetup] Failed to load/create MPC_GlobalSound")
+        unreal.log_error("[EchoSetup] Failed to create MPC_GlobalSound")
         return
 
-    # Add parameters if they don't exist
-    vec_params = mpc.get_editor_property("vector_parameters")
-    scalar_params = mpc.get_editor_property("scalar_parameters")
+    # Build exact parameter lists
+    def make_vector(name, default=unreal.LinearColor()):
+        p = unreal.CollectionVectorParameter()
+        p.set_editor_property("parameter_name", name)
+        p.set_editor_property("default_value", default)
+        return p
 
-    def ensure_scalar(name, default=0.0):
-        if not any(p.get_editor_property("parameter_name") == name for p in scalar_params):
-            p = unreal.CollectionScalarParameter()
-            p.set_editor_property("parameter_name", name)
-            p.set_editor_property("default_value", default)
-            scalar_params.append(p)
-            unreal.log(f"[EchoSetup] Added scalar parameter: {name}")
+    def make_scalar(name, default=0.0):
+        p = unreal.CollectionScalarParameter()
+        p.set_editor_property("parameter_name", name)
+        p.set_editor_property("default_value", default)
+        return p
 
-    def ensure_vector(name, default=unreal.LinearColor()):
-        if not any(p.get_editor_property("parameter_name") == name for p in vec_params):
-            p = unreal.CollectionVectorParameter()
-            p.set_editor_property("parameter_name", name)
-            p.set_editor_property("default_value", default)
-            vec_params.append(p)
-            unreal.log(f"[EchoSetup] Added vector parameter: {name}")
-
-    ensure_vector(MPCParams.LAST_IMPACT_LOCATION)
-    ensure_vector(MPCParams.PLAYER_WORLD_POSITION)
-    ensure_scalar(MPCParams.CURRENT_RIPPLE_RADIUS)
-    ensure_scalar(MPCParams.RIPPLE_INTENSITY)
-    ensure_scalar(MPCParams.RIPPLE_START_TIME)
+    vec_params = [
+        make_vector(MPCParams.LAST_IMPACT_LOCATION),
+        make_vector(MPCParams.PLAYER_WORLD_POSITION),
+    ]
+    scalar_params = [
+        make_scalar(MPCParams.CURRENT_RIPPLE_RADIUS),
+        make_scalar(MPCParams.RIPPLE_INTENSITY),
+        make_scalar(MPCParams.RIPPLE_START_TIME),
+    ]
 
     mpc.set_editor_property("vector_parameters", vec_params)
     mpc.set_editor_property("scalar_parameters", scalar_params)
+    unreal.log(f"[EchoSetup] Created MPC with {len(vec_params)} vector, {len(scalar_params)} scalar parameters")
 
     save_asset(path)
-    log_created("MPC_GlobalSound (Updated)", path)
+    log_created("MPC_GlobalSound (Fresh)", path)
 
 
 if __name__ == "__main__":
