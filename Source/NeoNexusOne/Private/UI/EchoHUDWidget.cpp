@@ -4,8 +4,6 @@
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogEchoHUD, Log, All);
-
 void UEchoHUDWidget::UpdateSignal(float NormalizedSignal)
 {
 	if (SignalBar)

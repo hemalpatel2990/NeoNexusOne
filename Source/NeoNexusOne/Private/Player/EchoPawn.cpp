@@ -139,7 +139,7 @@ void AEchoPawn::HandleSlam(const FInputActionValue& Value)
 
 void AEchoPawn::OnImpact(EEchoMovementState State, FVector Location)
 {
-	UE_LOG(LogEchoPawn, Warning, TEXT("OnImpact: State=%d Location=(%s)"), static_cast<int32>(State), *Location.ToString());
+	UE_LOG(LogEchoPawn, Verbose, TEXT("OnImpact: State=%d Location=(%s)"), static_cast<int32>(State), *Location.ToString());
 
 	// Build ripple event based on impact type
 	FEchoRippleEvent RippleEvent;
