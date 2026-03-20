@@ -3,6 +3,7 @@
 #include "Core/EchoPlayerController.h"
 #include "Core/EchoTypes.h"
 #include "UI/EchoHUDWidget.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "EnhancedInputSubsystems.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "AI/EchoEnemyPawn.h"
