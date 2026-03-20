@@ -73,6 +73,8 @@ def run():
         make_scalar(MPCParams.CURRENT_RIPPLE_RADIUS),
         make_scalar(MPCParams.RIPPLE_INTENSITY),
         make_scalar(MPCParams.RIPPLE_START_TIME),
+        make_scalar(MPCParams.PROXIMITY_INTERFERENCE),
+        make_scalar(MPCParams.SIGNAL_INTENSITY),
     ]
 
     mpc.set_editor_property("vector_parameters", vec_params)

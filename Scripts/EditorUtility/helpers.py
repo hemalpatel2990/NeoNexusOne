@@ -22,6 +22,8 @@ class MPCParams:
     RIPPLE_INTENSITY         = "RippleIntensity"
     PLAYER_WORLD_POSITION    = "PlayerWorldPosition"
     RIPPLE_START_TIME        = "RippleStartTime"
+    PROXIMITY_INTERFERENCE   = "ProximityInterference"
+    SIGNAL_INTENSITY         = "SignalIntensity"
 
 def asset_exists(path: str) -> bool:
     return unreal.EditorAssetLibrary.does_asset_exist(path)

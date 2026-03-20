@@ -86,6 +86,10 @@ namespace EchoDefaults
 	constexpr float AIInvestigateTimeout = 5.0f;
 	constexpr float AIAcceptanceRadius = 100.0f;
 	constexpr float AIKillOverlapRadius = 60.0f;
+
+	// HUD
+	constexpr float SignalDecayDuration = 5.0f;   // Seconds for signal to decay from 1→0
+	constexpr float MaxProximityRange = 1500.0f;   // Distance at which interference starts
 }
 
 /**
@@ -99,4 +103,6 @@ namespace EchoMPCParams
 	inline const FName RippleIntensity = FName(TEXT("RippleIntensity"));
 	inline const FName PlayerWorldPosition = FName(TEXT("PlayerWorldPosition"));
 	inline const FName RippleStartTime = FName(TEXT("RippleStartTime"));
+	inline const FName ProximityInterference = FName(TEXT("ProximityInterference"));
+	inline const FName SignalIntensity = FName(TEXT("SignalIntensity"));
 }
