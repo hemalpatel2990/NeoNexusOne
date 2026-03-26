@@ -13,6 +13,7 @@
 #include "Core/EchoGameMode.h"
 #include "Core/EchoPlayerController.h"
 #include "Sound/EchoRippleManager.h"
+#include "Perception/AISense_Hearing.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Materials/MaterialParameterCollection.h"
 
@@ -175,8 +176,10 @@ void AEchoPawn::OnImpact(EEchoMovementState State, FVector Location)
 		}
 	}
 
-	// Report noise for AI perception
+	// Report noise for AI perception (use direct report so UAISense_Hearing receives it)
 	MakeNoise(RippleEvent.NoiseVolume, this, Location);
+	UAISense_Hearing::ReportNoiseEvent(GetWorld(), Location, RippleEvent.NoiseVolume,
+		this, 0.0f);
 
 	// Reset HUD signal strength
 	if (AEchoPlayerController* EchoPC = Cast<AEchoPlayerController>(GetController()))
