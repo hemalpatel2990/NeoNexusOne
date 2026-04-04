@@ -29,6 +29,10 @@
         {
             "Name": "EchoLocation",
             "Enabled": true
+        },
+        {
+            "Name": "EchoLevelKit",
+            "Enabled": true
         }
     ]
 }

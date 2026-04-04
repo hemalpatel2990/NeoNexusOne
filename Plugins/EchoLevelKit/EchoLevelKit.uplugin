@@ -1,0 +1,13 @@
+{
+    "FileVersion": 3,
+    "Version": 1,
+    "VersionName": "1.0",
+    "FriendlyName": "Echo Level Kit",
+    "Description": "Modular level building props for Project: Echo-Location — stylized geometric primitives with per-instance color.",
+    "Category": "Gameplay",
+    "CreatedBy": "NeoNexusOne",
+    "CanContainContent": true,
+    "IsBetaVersion": false,
+    "IsExperimentalVersion": false,
+    "Installed": false
+}
