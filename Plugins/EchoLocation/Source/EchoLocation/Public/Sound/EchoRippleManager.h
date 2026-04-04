@@ -24,7 +24,7 @@ class UCurveFloat;
  *   3. Call TriggerRipple() from the player pawn on impact.
  */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class NEONEXUSONE_API UEchoRippleManager : public UActorComponent
+class ECHOLOCATION_API UEchoRippleManager : public UActorComponent
 {
 	GENERATED_BODY()
 

@@ -11,7 +11,7 @@ class UAIPerceptionComponent;
 class UAISenseConfig_Hearing;
 
 UCLASS()
-class NEONEXUSONE_API AEchoAIController : public AAIController
+class ECHOLOCATION_API AEchoAIController : public AAIController
 {
 	GENERATED_BODY()
 

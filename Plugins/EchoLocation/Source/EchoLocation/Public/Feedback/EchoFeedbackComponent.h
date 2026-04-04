@@ -11,7 +11,7 @@ class UCameraShakeBase;
 class UForceFeedbackEffect;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class NEONEXUSONE_API UEchoFeedbackComponent : public UActorComponent
+class ECHOLOCATION_API UEchoFeedbackComponent : public UActorComponent
 {
 	GENERATED_BODY()
 

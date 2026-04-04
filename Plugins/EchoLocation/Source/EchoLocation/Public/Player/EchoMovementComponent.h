@@ -10,7 +10,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEchoImpact, EEchoMovementState, State, FVector, Location);
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class NEONEXUSONE_API UEchoMovementComponent : public UPawnMovementComponent
+class ECHOLOCATION_API UEchoMovementComponent : public UPawnMovementComponent
 {
 	GENERATED_BODY()
 

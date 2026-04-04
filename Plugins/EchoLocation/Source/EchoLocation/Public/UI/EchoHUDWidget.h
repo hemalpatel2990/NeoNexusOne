@@ -17,7 +17,7 @@ class UTextBlock;
  * pulsing impact indicator.
  */
 UCLASS(Abstract)
-class NEONEXUSONE_API UEchoHUDWidget : public UUserWidget
+class ECHOLOCATION_API UEchoHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
 

@@ -9,7 +9,7 @@
 class UEchoRippleManager;
 
 UCLASS()
-class NEONEXUSONE_API AEchoGameMode : public AGameModeBase
+class ECHOLOCATION_API AEchoGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 

@@ -19,7 +19,7 @@ class UInputAction;
 struct FInputActionValue;
 
 UCLASS()
-class NEONEXUSONE_API AEchoPawn : public APawn
+class ECHOLOCATION_API AEchoPawn : public APawn
 {
 	GENERATED_BODY()
 

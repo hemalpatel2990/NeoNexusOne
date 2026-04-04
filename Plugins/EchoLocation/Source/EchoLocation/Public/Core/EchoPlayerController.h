@@ -11,7 +11,7 @@ class UEchoHUDWidget;
 class UMaterialParameterCollection;
 
 UCLASS()
-class NEONEXUSONE_API AEchoPlayerController : public APlayerController
+class ECHOLOCATION_API AEchoPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 

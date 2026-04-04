@@ -12,7 +12,7 @@ class USphereComponent;
 class UFloatingPawnMovement;
 
 UCLASS()
-class NEONEXUSONE_API AEchoEnemyPawn : public APawn
+class ECHOLOCATION_API AEchoEnemyPawn : public APawn
 {
 	GENERATED_BODY()
 
