@@ -1,0 +1,20 @@
+{
+    "FileVersion": 3,
+    "Version": 1,
+    "VersionName": "1.0",
+    "FriendlyName": "Echo Location",
+    "Description": "Core gameplay module for Project: Echo-Location — sonar-based horror-puzzle game.",
+    "Category": "Gameplay",
+    "CreatedBy": "NeoNexusOne",
+    "CanContainContent": false,
+    "IsBetaVersion": false,
+    "IsExperimentalVersion": false,
+    "Installed": false,
+    "Modules": [
+        {
+            "Name": "EchoLocation",
+            "Type": "Runtime",
+            "LoadingPhase": "Default"
+        }
+    ]
+}
