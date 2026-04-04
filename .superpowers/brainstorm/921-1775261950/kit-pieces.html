@@ -1,0 +1,91 @@
+<h2>Modular Level Kit — The 5 Pieces</h2>
+<p class="subtitle">Each piece is a Blueprint Actor with per-instance color. All use M_EchoMaster via Dynamic Material Instance.</p>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-image" style="background:#0a0a0a;padding:20px;display:flex;align-items:center;justify-content:center;min-height:120px;">
+      <pre style="color:#00ffff;font-size:11px;line-height:1.2;margin:0">
+  ┌────────────────────┐
+  │                    │  400w × 50d × 400h
+  │    WALL SEGMENT    │  Snap-friendly grid size
+  │                    │  Box collision
+  └────────────────────┘
+      </pre>
+    </div>
+    <div class="card-body">
+      <h3>BP_LevelWall</h3>
+      <p><strong>Mesh:</strong> Scaled Cube (400×50×400)</p>
+      <p><strong>Use:</strong> Corridors, rooms, boundaries. The core structural piece.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-image" style="background:#0a0a0a;padding:20px;display:flex;align-items:center;justify-content:center;min-height:120px;">
+      <pre style="color:#00ffff;font-size:11px;line-height:1.2;margin:0">
+        /\
+       /  \
+      /    \       300h cone
+     /      \      150 base radius
+    /________\     Box/convex collision
+      </pre>
+    </div>
+    <div class="card-body">
+      <h3>BP_LevelRock</h3>
+      <p><strong>Mesh:</strong> Cone (R:150, H:300)</p>
+      <p><strong>Use:</strong> Mountains, rocky outcrops. Scale up for peaks, cluster small ones for rocky terrain.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-image" style="background:#0a0a0a;padding:20px;display:flex;align-items:center;justify-content:center;min-height:120px;">
+      <pre style="color:#00ffff;font-size:11px;line-height:1.2;margin:0">
+       ___
+      (   )        Sphere R:80 (canopy)
+      (___)
+        |
+        |          Cylinder R:25, H:200 (trunk)
+        |
+      __|__
+      </pre>
+    </div>
+    <div class="card-body">
+      <h3>BP_LevelTree</h3>
+      <p><strong>Meshes:</strong> Cylinder trunk + Sphere canopy (compound)</p>
+      <p><strong>Use:</strong> Forest areas. The sonar sweeping over round canopies creates beautiful reveals.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-image" style="background:#0a0a0a;padding:20px;display:flex;align-items:center;justify-content:center;min-height:120px;">
+      <pre style="color:#00ffff;font-size:11px;line-height:1.2;margin:0">
+      ┌──────────┐
+      │          │    100 × 100 × 100
+      │  CRATE   │    Box collision
+      │          │    Stackable
+      └──────────┘
+      </pre>
+    </div>
+    <div class="card-body">
+      <h3>BP_LevelCrate</h3>
+      <p><strong>Mesh:</strong> Cube (100×100×100)</p>
+      <p><strong>Use:</strong> Scattered obstacles, cover, stackable platforms. Works in any environment.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-image" style="background:#0a0a0a;padding:20px;display:flex;align-items:center;justify-content:center;min-height:120px;">
+      <pre style="color:#00ffff;font-size:11px;line-height:1.2;margin:0">
+           /|
+          / |
+         /  |       200w × 200d × 150h
+        /   |       Wedge shape
+       /____|       Walkable surface
+      </pre>
+    </div>
+    <div class="card-body">
+      <h3>BP_LevelRamp</h3>
+      <p><strong>Mesh:</strong> UE5 Wedge or rotated Cube with collision (200×200×150)</p>
+      <p><strong>Use:</strong> Elevation changes, hillsides. Connect flat areas to raised platforms.</p>
+    </div>
+  </div>
+</div>

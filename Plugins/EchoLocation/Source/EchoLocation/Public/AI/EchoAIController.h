@@ -21,7 +21,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-	virtual void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result) override;
 
 private:
 	UFUNCTION()
@@ -38,5 +37,6 @@ private:
 
 	EEchoAIState CurrentState = EEchoAIState::Idle;
 	FVector SpawnLocation = FVector::ZeroVector;
+	FVector TargetLocation = FVector::ZeroVector;
 	float LingerTimer = 0.0f;
 };

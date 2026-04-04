@@ -168,6 +168,7 @@ void AEchoPawn::OnImpact(EEchoMovementState State, FVector Location)
 	{
 		return;
 	}
+	
 	if (AEchoGameMode* GM = Cast<AEchoGameMode>(World->GetAuthGameMode()))
 	{
 		if (UEchoRippleManager* RippleMgr = GM->GetRippleManager())
@@ -178,8 +179,8 @@ void AEchoPawn::OnImpact(EEchoMovementState State, FVector Location)
 
 	// Report noise for AI perception (use direct report so UAISense_Hearing receives it)
 	MakeNoise(RippleEvent.NoiseVolume, this, Location);
-	UAISense_Hearing::ReportNoiseEvent(GetWorld(), Location, RippleEvent.NoiseVolume,
-		this, 0.0f);
+	UAISense_Hearing::ReportNoiseEvent(World, Location, RippleEvent.NoiseVolume,
+		this, EchoDefaults::AIHearingRange, NAME_None);
 
 	// Reset HUD signal strength
 	if (AEchoPlayerController* EchoPC = Cast<AEchoPlayerController>(GetController()))

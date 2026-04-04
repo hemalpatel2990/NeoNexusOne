@@ -45,10 +45,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Movement")
 	float GroundTraceThreshold = 5.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Echo|Movement")
-	float SlamVelocityThreshold = 400.0f;
-
+	
 	// --- Delegates ---
 
 	UPROPERTY(BlueprintAssignable, Category = "Echo|Movement")

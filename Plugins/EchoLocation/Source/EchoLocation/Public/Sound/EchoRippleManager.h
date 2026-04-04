@@ -83,6 +83,7 @@ private:
 
 	float CachedRadius = 0.0f;
 	float CachedIntensity = 0.0f;
+	bool bMPCDirty = false;
 
 	void UpdateMPC(const FVector& Location, float Radius, float Intensity);
 	void ResetMPC();

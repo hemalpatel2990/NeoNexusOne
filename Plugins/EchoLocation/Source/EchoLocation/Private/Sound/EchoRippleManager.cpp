@@ -61,13 +61,20 @@ void UEchoRippleManager::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// FTimeline requires manual ticking — this is the C++ equivalent of Blueprint Timeline auto-tick
+	// FTimeline requires manual ticking — callbacks cache values and set bMPCDirty
 	RippleTimeline.TickTimeline(DeltaTime);
+
+	// Single MPC flush per frame after both curves have been sampled
+	if (bMPCDirty)
+	{
+		UpdateMPC(ActiveEvent.ImpactLocation, CachedRadius, CachedIntensity);
+		bMPCDirty = false;
+	}
 }
 
 void UEchoRippleManager::TriggerRipple(const FEchoRippleEvent& Event)
 {
-	UE_LOG(LogEchoRipple, Warning, TEXT("TriggerRipple: Location=(%s) MaxRadius=%.1f Intensity=%.1f MPC=%s RadiusCurve=%s IntensityCurve=%s"),
+	UE_LOG(LogEchoRipple, Verbose, TEXT("TriggerRipple: Location=(%s) MaxRadius=%.1f Intensity=%.1f MPC=%s RadiusCurve=%s IntensityCurve=%s"),
 		*Event.ImpactLocation.ToString(), Event.MaxRadius, Event.Intensity,
 		EchoMPC ? TEXT("SET") : TEXT("NULL"),
 		RippleRadiusCurve ? TEXT("SET") : TEXT("NULL"),
@@ -94,16 +101,14 @@ void UEchoRippleManager::TriggerRipple(const FEchoRippleEvent& Event)
 
 void UEchoRippleManager::OnRadiusTimelineUpdate(float Value)
 {
-	// Value is the curve output (0→1) sampled at the current normalized time
 	CachedRadius = Value * ActiveEvent.MaxRadius;
-	UpdateMPC(ActiveEvent.ImpactLocation, CachedRadius, CachedIntensity);
+	bMPCDirty = true;
 }
 
 void UEchoRippleManager::OnIntensityTimelineUpdate(float Value)
 {
-	// Value is the curve output (1→0) sampled at the current normalized time — independent of radius
 	CachedIntensity = Value * ActiveEvent.Intensity;
-	UpdateMPC(ActiveEvent.ImpactLocation, CachedRadius, CachedIntensity);
+	bMPCDirty = true;
 }
 
 void UEchoRippleManager::OnRippleTimelineFinished()
@@ -138,7 +143,7 @@ void UEchoRippleManager::UpdateMPC(const FVector& Location, float Radius, float 
 		return;
 	}
 
-	UE_LOG(LogEchoRipple, Log, TEXT("UpdateMPC: Location=(%s) Radius=%.1f Intensity=%.2f"),
+	UE_LOG(LogEchoRipple, Verbose, TEXT("UpdateMPC: Location=(%s) Radius=%.1f Intensity=%.2f"),
 		*Location.ToString(), Radius, Intensity);
 
 	// MPC vectors are passed as FLinearColor (XYZW) — pack our FVector into RGB, W unused

@@ -1,0 +1,64 @@
+<h2>Modular Level Kit — Approach</h2>
+<p class="subtitle">How should the kit pieces be created and managed?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Blueprint Actor Kit (Recommended)</h3>
+      <p>Each prop is a <strong>Blueprint Actor</strong> with a Static Mesh Component + per-instance color parameter exposed as an editable property. Built from UE5's basic shapes (Cube, Cylinder, Cone, Sphere) combined in the BP. No external modeling needed.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Per-instance color tinting via a single Blueprint property</li>
+          <li>Can add collision, snap points, and gameplay tags per-prop</li>
+          <li>Easy to extend — add new props by duplicating and reshaping</li>
+          <li>Works with existing M_EchoMaster + Dynamic Material Instance</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Each BP is a full Actor (slight overhead vs raw static mesh)</li>
+          <li>Compound shapes (tree = cylinder + sphere) need manual assembly</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Static Mesh + Material Instance Kit</h3>
+      <p>Each prop is a <strong>raw Static Mesh</strong> placed directly in the level. Per-instance color via Material Instance Dynamic created at runtime by a lightweight C++ component attached to each mesh.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Minimal overhead — just meshes with a small component</li>
+          <li>Fastest rendering (instanced static meshes)</li>
+          <li>Clean separation: mesh = shape, component = color</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Needs a new C++ UActorComponent for per-instance color</li>
+          <li>Less self-contained than BPs — two things to manage per prop</li>
+          <li>Compound shapes harder without a parent Actor</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>C++ Base Actor + BP Children</h3>
+      <p>A single <strong>C++ base class</strong> (<code>AEchoLevelProp</code>) that handles per-instance color, collision setup, and sonar integration. Each prop is a Blueprint child that just sets its mesh(es) and default color.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Consistent behavior across all props (color, collision, tagging)</li>
+          <li>C++ handles the "smart" part, BPs just configure shape/defaults</li>
+          <li>Easy to add gameplay features later (destructible, interactive)</li>
+          <li>Follows the project's existing C++ base + BP child pattern</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>More upfront work (C++ class + BP children)</li>
+          <li>Requires editor restart for C++ changes</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>

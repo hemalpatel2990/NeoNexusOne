@@ -2,7 +2,7 @@
 
 ## Current Milestone
 **Milestone 2: "Universal Visuals & HUD"** — **IN PROGRESS**
-*Goal: Supporting complex models without UVs, high-fidelity "Flux" look, and Hacker's View HUD.*
+*Goal: Supporting complex models without UVs, vibrant "Ink & Sonar" comic-book aesthetic, and Inked HUD.*
 
 ---
 
@@ -17,10 +17,16 @@
 
 ### Milestone 2: "Universal Visuals & HUD" — **IN PROGRESS**
 *   [x] **UV-Independent 3D Edge Detection**: Pivoted from 2D Post-Process to superior object-space `fwidth` edges. Supports all meshes (monsters, rubble) with no UV requirements.
-*   [ ] **"Ink & Paint" Cel Shading**: Pivoted from Digital Flux to a bold comic-book aesthetic with vibrant colors, dark ink outlines, and world-space halftone dots.
+*   [x] **"Ink & Sonar" Cel Shading**: Bold comic-book aesthetic with three visual layers:
+    *   UV-edge + Fresnel + fwidth **bold outlines** on all geometry
+    *   **Cel-shading bands** (3 discrete brightness steps by sonar distance)
+    *   **Distance-scaled halftone dots** (sparse near impact, dense far)
+    *   Smooth quadratic **afterglow fade** (replaces pixel noise dissolve)
+    *   Vibrant **per-instance colors**: blue walls, purple obstacles, red enemies, green player
+    *   New `MI_EchoObstacle` material instance for obstacle differentiation
+*   [x] **Sonar Reveal Bug Fixes**: Fixed afterglow decay (preserved MPC params after ring finishes), added explicit sonar ring edge node, fixed contour distance calculation.
 *   [x] **Source Reorganization**: Moved all C++ files into standard `Public/` and `Private/` directories.
-*   [ ] `WBP_EchoHUD`: Minimalist "Hacker's View" UI for signal strength and mapping progress.
-*   [ ] `AEchoPlayerController`: C++ logic for signal decay and proximity interference.
+*   [x] **Inked HUD**: "Hand-Drawn" UI with bold outlines and halftone fills for signal strength and mapping progress. C++ widget base, PlayerController signal decay/proximity, WBP_InkedHUD widget BP, M_EchoInterference post-process scanlines.
 *   [ ] Modular Level Kit: Create 3-4 simple "Blueprint" props for level building.
 
 ### Milestone 3: "The Mapping Puzzle" — **PLANNED**
@@ -37,6 +43,7 @@
 ## Technical Health
 *   **Engine:** Unreal Engine 5.6
 *   **Source Structure:** Standardized (Public/Private split complete).
-*   **Visual Strategy:** 100% Unlit, Procedural 3D Sonar.
-*   **Stability:** High. Custom HLSL nodes used for grid and edge stability.
-*   **Next Priority:** `WBP_EchoHUD` implementation.
+*   **Visual Strategy:** 100% Unlit, "Ink & Sonar" cel-shaded comic-book aesthetic.
+*   **Stability:** High. Custom HLSL nodes for cel-bands, halftone, outlines, afterglow.
+*   **Optimization:** RippleManager MPC writes reduced to 1×/frame via dirty flag pattern. Debug logs demoted to Verbose. Hardcoded constants extracted to `EchoDefaults`.
+*   **Next Priority:** Modular Level Kit.

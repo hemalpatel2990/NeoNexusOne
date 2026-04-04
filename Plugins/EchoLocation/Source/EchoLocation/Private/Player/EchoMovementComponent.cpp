@@ -20,7 +20,7 @@ void UEchoMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		return;
 	}
 
-	const float BoxHalfHeight = 50.0f;
+	constexpr float BoxHalfHeight = EchoDefaults::BoxHalfHeight;
 
 	switch (CurrentState)
 	{
@@ -193,7 +193,7 @@ bool UEchoMovementComponent::IsNearGround(float& OutFloorZ) const
 	}
 
 	const FVector PawnLocation = UpdatedComponent->GetComponentLocation();
-	const float BoxHalfHeight = 50.0f;
+	constexpr float BoxHalfHeight = EchoDefaults::BoxHalfHeight;
 	const FVector Start = PawnLocation - FVector(0.0f, 0.0f, BoxHalfHeight);
 	const FVector End = Start - FVector(0.0f, 0.0f, GroundTraceThreshold);
 

@@ -11,6 +11,8 @@
 #include "Core/EchoTypes.h"
 #include "Engine/Engine.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogEchoEnemy, Log, All);
+
 AEchoEnemyPawn::AEchoEnemyPawn()
 {
 	// Box collision as root
@@ -50,6 +52,11 @@ void AEchoEnemyPawn::BeginPlay()
 	Super::BeginPlay();
 
 	KillSphere->OnComponentBeginOverlap.AddDynamic(this, &AEchoEnemyPawn::OnKillOverlap);
+
+	UE_LOG(LogEchoEnemy, Verbose, TEXT("EnemyPawn BeginPlay: Controller=%s AIControllerClass=%s AutoPossess=%d"),
+		GetController() ? *GetController()->GetName() : TEXT("NONE"),
+		AIControllerClass ? *AIControllerClass->GetName() : TEXT("NONE"),
+		static_cast<int32>(AutoPossessAI));
 }
 
 void AEchoEnemyPawn::OnKillOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,

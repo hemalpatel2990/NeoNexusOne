@@ -58,6 +58,7 @@ struct FEchoRippleEvent
 namespace EchoDefaults
 {
 	// Movement
+	constexpr float BoxHalfHeight = 50.0f;
 	constexpr float IdleHoverHeight = 20.0f;
 	constexpr float GlideHoverHeight = 75.0f;
 	constexpr float HoverRiseSpeed = 15.0f;

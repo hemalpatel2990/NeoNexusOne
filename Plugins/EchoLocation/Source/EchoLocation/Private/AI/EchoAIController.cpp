@@ -3,7 +3,8 @@
 #include "AI/EchoAIController.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Hearing.h"
-#include "Navigation/PathFollowingComponent.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogEchoAI, Log, All);
 
 AEchoAIController::AEchoAIController()
 {
@@ -32,10 +33,21 @@ void AEchoAIController::BeginPlay()
 	}
 
 	AIPerceptionComp->OnTargetPerceptionUpdated.AddDynamic(this, &AEchoAIController::OnPerceptionUpdated);
+
+	UE_LOG(LogEchoAI, Verbose, TEXT("AIController BeginPlay: Pawn=%s Perception=%s HearingRange=%.0f"),
+		GetPawn() ? *GetPawn()->GetName() : TEXT("NONE"),
+		AIPerceptionComp ? TEXT("VALID") : TEXT("NULL"),
+		HearingConfig ? HearingConfig->HearingRange : -1.0f);
 }
 
 void AEchoAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
+	UE_LOG(LogEchoAI, Verbose, TEXT("OnPerceptionUpdated: Actor=%s Sensed=%d Strength=%.2f Location=(%s)"),
+		Actor ? *Actor->GetName() : TEXT("NULL"),
+		Stimulus.WasSuccessfullySensed() ? 1 : 0,
+		Stimulus.Strength,
+		*Stimulus.StimulusLocation.ToString());
+
 	if (!Stimulus.WasSuccessfullySensed())
 	{
 		return;
@@ -43,19 +55,28 @@ void AEchoAIController::OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 
 	const float Strength = Stimulus.Strength;
 
+	UE_LOG(LogEchoAI, Verbose, TEXT("  Strength=%.4f SlamThreshold=%.4f State=%d"),
+		Strength, EchoDefaults::SlamNoiseVolume, static_cast<int32>(CurrentState));
+
 	// Slam (strength ~1.0): always investigate
 	// Drop (strength ~0.5): only if Idle and within Drop radius
 	if (Strength >= EchoDefaults::SlamNoiseVolume)
 	{
+		UE_LOG(LogEchoAI, Verbose, TEXT("  -> SLAM detected, investigating"));
 		InvestigateLocation(Stimulus.StimulusLocation);
 	}
 	else if (CurrentState == EEchoAIState::Idle)
 	{
 		const float Distance = FVector::Dist(GetPawn()->GetActorLocation(), Stimulus.StimulusLocation);
+		UE_LOG(LogEchoAI, Verbose, TEXT("  -> DROP: Distance=%.1f DropRadius=%.1f"), Distance, EchoDefaults::DropRippleRadius);
 		if (Distance <= EchoDefaults::DropRippleRadius)
 		{
 			InvestigateLocation(Stimulus.StimulusLocation);
 		}
+	}
+	else
+	{
+		UE_LOG(LogEchoAI, Verbose, TEXT("  -> Ignored (State=%d, not Idle)"), static_cast<int32>(CurrentState));
 	}
 }
 
@@ -63,51 +84,48 @@ void AEchoAIController::InvestigateLocation(const FVector& Location)
 {
 	CurrentState = EEchoAIState::Investigating;
 	LingerTimer = 0.0f;
-	MoveToLocation(Location, EchoDefaults::AIAcceptanceRadius);
+	TargetLocation = Location;
+
+	UE_LOG(LogEchoAI, Verbose, TEXT("InvestigateLocation: Target=(%s)"),
+		*Location.ToString());
 }
 
 void AEchoAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CurrentState == EEchoAIState::Investigating)
+	if (!GetPawn()) { return; }
+	const float DistToTarget = FVector::Dist(GetPawn()->GetActorLocation(), TargetLocation);
+
+	if (CurrentState == EEchoAIState::Investigating || CurrentState == EEchoAIState::Returning)
 	{
-		// If move is done (reached target), start linger countdown
-		if (GetPathFollowingComponent() && GetPathFollowingComponent()->GetStatus() == EPathFollowingStatus::Idle)
+		if (DistToTarget <= EchoDefaults::AIAcceptanceRadius)
 		{
-			LingerTimer += DeltaTime;
-			if (LingerTimer >= EchoDefaults::AIInvestigateTimeout)
+			// Arrived at target
+			if (CurrentState == EEchoAIState::Investigating)
 			{
-				ReturnToSpawn();
+				LingerTimer += DeltaTime;
+				if (LingerTimer >= EchoDefaults::AIInvestigateTimeout)
+				{
+					ReturnToSpawn();
+				}
+			}
+			else
+			{
+				CurrentState = EEchoAIState::Idle;
 			}
 		}
-	}
-	else if (CurrentState == EEchoAIState::Returning)
-	{
-		if (GetPathFollowingComponent() && GetPathFollowingComponent()->GetStatus() == EPathFollowingStatus::Idle)
+		else
 		{
-			CurrentState = EEchoAIState::Idle;
+			// Move toward target directly (bypasses NavMesh)
+			const FVector Direction = (TargetLocation - GetPawn()->GetActorLocation()).GetSafeNormal();
+			GetPawn()->AddMovementInput(Direction, 1.0f);
 		}
-	}
-}
-
-void AEchoAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
-{
-	Super::OnMoveCompleted(RequestID, Result);
-
-	if (CurrentState == EEchoAIState::Investigating)
-	{
-		// Arrived at investigation target — linger timer starts in Tick
-		LingerTimer = 0.0f;
-	}
-	else if (CurrentState == EEchoAIState::Returning)
-	{
-		CurrentState = EEchoAIState::Idle;
 	}
 }
 
 void AEchoAIController::ReturnToSpawn()
 {
 	CurrentState = EEchoAIState::Returning;
-	MoveToLocation(SpawnLocation, EchoDefaults::AIAcceptanceRadius);
+	TargetLocation = SpawnLocation;
 }
